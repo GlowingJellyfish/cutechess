@@ -249,6 +249,7 @@ add_executable(gui
 	projects/gui/src/cutechessapp.cpp
 	projects/gui/src/plaintextlog.cpp
 	projects/gui/src/tournamentsettingswidget.cpp
+	projects/gui/src/uitheme.cpp
 	projects/gui/src/gamedatabasemanager.cpp
 	projects/gui/src/pgndatabase.cpp
 	projects/gui/src/pathlineedit.cpp

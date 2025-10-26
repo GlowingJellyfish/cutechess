@@ -23,6 +23,7 @@
 #include <qcustomplot.h>
 #include <chessgame.h>
 #include <moveevaluation.h>
+#include "uitheme.h"
 
 EvalHistory::EvalHistory(QWidget *parent)
 	: QWidget(parent),
@@ -94,8 +95,9 @@ void EvalHistory::setScores(const QMap< int, int >& scores)
 	m_plot->addGraph();
 	m_plot->addGraph();
 
-	auto cWhite = QColor(0xff, 0xce, 0x9e);
-	auto cBlack = QColor(0xd1, 0x8b, 0x47);
+	auto cWhite = UIThemeManager::instance().currentTheme().m_lightSquare;
+	auto cBlack = UIThemeManager::instance().currentTheme().m_darkSquare;
+
 	auto pWhite = QPen(cWhite.darker(150));
 	pWhite.setWidth(2);
 	auto pBlack = QPen(cBlack.darker());

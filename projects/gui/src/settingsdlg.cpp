@@ -17,6 +17,7 @@
 */
 
 #include "settingsdlg.h"
+#include "uitheme.h"
 #include "ui_settingsdlg.h"
 #include <QShowEvent>
 #include <QSettings>
@@ -30,6 +31,8 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 {
 	ui->setupUi(this);
 	ui->m_gameSettings->enableSplitTimeControls(true);
+
+	ui->m_themeCombo->addItems(UIThemeManager::instance().getThemeList());
 
 	readSettings();
 
@@ -127,6 +130,12 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 		this, &SettingsDialog::browseTournamentDefaultPgnOutFile);
 	connect(ui->m_tournamentDefaultEpdOutFileBtn, &QPushButton::clicked,
 		this, &SettingsDialog::browseTournamentDefaultEpdOutFile);
+	
+	connect(ui->m_themeCombo, &QComboBox::currentTextChanged,
+		[=](const QString& variant)
+	{
+		QSettings().setValue("ui/theme", variant);
+	});
 
 	ui->m_gameSettings->onHumanCountChanged(0);
 	ui->m_gameSettings->enableSettingsUpdates();
@@ -229,6 +238,8 @@ void SettingsDialog::readSettings()
 	ui->m_tbPathEdit->setText(s.value("tb_path").toString());
 	ui->m_moveAnimationSpin->setValue(
 		s.value("move_animation_duration", 300).toInt());
+	int index = ui->m_themeCombo->findText(s.value("theme").toString());
+	ui->m_themeCombo->setCurrentIndex(index);
 	s.endGroup();
 
 	s.beginGroup("pgn");

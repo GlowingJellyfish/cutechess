@@ -31,6 +31,7 @@
 #include "graphicspiecereserve.h"
 #include "graphicspiece.h"
 #include "piecechooser.h"
+#include "uitheme.h"
 
 namespace {
 
@@ -539,7 +540,7 @@ void BoardScene::addMoveArrow(const QPointF& sourcePos,
 	float length = origline.length();
 	QColor color;
 
-	color = QColor(Qt::green).darker();
+	color = UIThemeManager::instance().currentTheme().m_arrow;
 
 	arrow << QPointF(            0,             0);
 	arrow << QPointF(-risex * size,  risey * size);

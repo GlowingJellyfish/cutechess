@@ -23,6 +23,7 @@
 #include <QPropertyAnimation>
 #include <board/square.h>
 #include "graphicspiece.h"
+#include "uitheme.h"
 
 namespace {
 
@@ -59,8 +60,8 @@ GraphicsBoard::GraphicsBoard(int files,
 	  m_ranks(ranks),
 	  m_squareSize(squareSize),
 	  m_coordSize(squareSize / 2.0),
-	  m_lightColor(QColor(0xff, 0xce, 0x9e)),
-	  m_darkColor(QColor(0xd1, 0x8b, 0x47)),
+	  m_lightColor(UIThemeManager::instance().currentTheme().m_lightSquare),
+	  m_darkColor(UIThemeManager::instance().currentTheme().m_darkSquare),
 	  m_wallColor(QColor(0xee,0xee,0xee)),
 	  m_squares(files * ranks),
 	  m_highlightAnim(nullptr),

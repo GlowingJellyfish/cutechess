@@ -23,6 +23,7 @@
 #include <QTime>
 #include <QFileInfo>
 #include <QSettings>
+#include <QStyleFactory>
 
 #include <mersenne.h>
 #include <enginemanager.h>
