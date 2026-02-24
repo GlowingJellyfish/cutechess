@@ -26,6 +26,18 @@
 
 int ChessEngine::s_count = 0;
 
+std::pair<QStringView, QStringView> ChessEngine::tokenize(QStringView sv)
+{
+	if (sv.isEmpty())
+		return std::make_pair(QStringView(), QStringView());
+
+	auto index = sv.indexOf(QChar(' '));
+	if (index == -1)
+		return std::make_pair(sv, QStringView());
+
+	return std::make_pair(sv.mid(0, index), sv.mid(index, sv.size() - 1).trimmed());
+}
+
 QStringRef ChessEngine::nextToken(const QStringRef& previous, bool untilEnd)
 {
 	const QString* str = previous.string();
@@ -77,6 +89,7 @@ ChessEngine::ChessEngine(QObject* parent)
 	  m_whiteEvalPov(false),
 	  m_pondering(false),
 	  m_timeoutScale(1.0),
+	  m_debugEnabled(false),
 	  m_pingTimer(new QTimer(this)),
 	  m_quitTimer(new QTimer(this)),
 	  m_idleTimer(new QTimer(this)),
@@ -143,6 +156,8 @@ void ChessEngine::applyConfiguration(const EngineConfiguration& configuration)
 	m_pondering = configuration.pondering();
 	m_timeoutScale = configuration.timeoutScale();
 	m_restartMode = configuration.restartMode();
+	m_debugEnabled = configuration.debugEnabled();
+
 	setClaimsValidated(configuration.areClaimsValidated());
 
 	// Read protocol timeouts from QSettings.
@@ -293,6 +308,11 @@ bool ChessEngine::whiteEvalPov() const
 bool ChessEngine::pondering() const
 {
 	return m_pondering;
+}
+
+bool ChessEngine::debugEnabled() const
+{
+	return m_debugEnabled;
 }
 
 void ChessEngine::endGame(const Chess::Result& result)

@@ -56,10 +56,10 @@ class LIB_EXPORT XboardEngine : public ChessEngine
 		virtual bool restartsBetweenGames() const;
 
 		/*! Parses a feature string from the engine. */
-		QList<XboardFeature> parseFeatures(const QString& featureArgs);
+		QList<XboardFeature> parseFeatures(QStringView featureArgs);
 
 		/*! Parses a principal valuation string from the engine. */
-		MoveEvaluation parsePv(const QStringRef& pvString);
+		MoveEvaluation parsePv(QStringView pvString);
 
 		/*! Parses an option string from the engine. */
 		EngineOption* parseOption(const QString& line);

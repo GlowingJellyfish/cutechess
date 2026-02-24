@@ -3,6 +3,36 @@
 All notable changes to Cute Chess will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased](https://github.com/cutechess/cutechess/tree/master)
+
+### Added
+
+### Fixed
+
+- Ctrl+A would select each engine multiple times in the engine selection dialog (#832)
+
+### Changed
+
+### Removed
+
+
+## [1.4.0](https://github.com/cutechess/cutechess/releases/tag/v1.4.0) - 2025-06-05
+
+### Added
+
+- Players can have separate time controls (#806)
+- Current / total game number in tab/window title (#658)
+
+### Fixed
+
+- Crash when tournament game fails to start (#794)
+- Cute Chess specific CodeQL static analysis queries have been re-enabled (#798)
+- Broken build with GCC 15 (#831)
+
+### Changed
+
+- Windows releases are now built with Qt 6 (#802)
+
 ## [1.3.1](https://github.com/cutechess/cutechess/releases/tag/v1.3.1) - 2023-07-30
 
 ### Added

@@ -20,8 +20,6 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 set(QT_COMPONENTS Core Gui Widgets Concurrent Svg PrintSupport)
 if(WITH_TESTS)
 	enable_testing()
@@ -254,12 +252,16 @@ add_executable(gui
 	projects/gui/src/gamedatabasemanager.cpp
 	projects/gui/src/pgndatabase.cpp
 	projects/gui/src/pathlineedit.cpp
+	projects/gui/src/pairtimecontroldlg.cpp
 	projects/gui/src/timecontroldlg.cpp
+	projects/gui/src/timecontrolwidget.cpp
 	projects/gui/src/pgnimporter.cpp
 
 	projects/gui/ui/settingsdlg.ui
 	projects/gui/ui/engineconfigdlg.ui
+	projects/gui/ui/pairtimecontroldlg.ui
 	projects/gui/ui/timecontroldlg.ui
+	projects/gui/ui/timecontrolwidget.ui
 	projects/gui/ui/engineselectiondlg.ui
 	projects/gui/ui/importprogressdlg.ui
 	projects/gui/ui/gamedatabasesearchdlg.ui
@@ -322,6 +324,9 @@ endif()
 install(TARGETS cli DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
 install(TARGETS gui DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
 install(FILES dist/linux/cutechess.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications COMPONENT Runtime)
-install(FILES projects/gui/res/icons/cutechess_256x256.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/application/256x256/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_64x64.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/64x64/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_128x128.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_256x256.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_512x512.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/ RENAME cutechess.png COMPONENT Runtime)
 install(FILES docs/cutechess-cli.6 DESTINATION ${CMAKE_INSTALL_MANDIR}/man6/ COMPONENT Documentation)
 install(FILES docs/cutechess-engines.json.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5/ COMPONENT Documentation)
