@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,9 +18,11 @@
 
 #include "cutechessapp.h"
 
+#include <QLoggingCategory>
 #include <QTextStream>
 #include <QStringList>
 #include <QMetaType>
+#include <QTranslator>
 
 #include <board/genericmove.h>
 #include <board/move.h>
@@ -36,7 +39,13 @@ int main(int argc, char* argv[])
 	qRegisterMetaType<Chess::Result>("Chess::Result");
 	qRegisterMetaType<MoveEvaluation>("MoveEvaluation");
 
+	QLoggingCategory::defaultCategory()->setEnabled(QtDebugMsg, true);
+
 	CuteChessApplication app(argc, argv);
+
+	QTranslator translator;
+	translator.load(QLocale(), "cutechess", "_", "translations", ".qm");
+	app.installTranslator(&translator);
 
 	QStringList arguments = app.arguments();
 	arguments.takeFirst(); // application name
@@ -50,7 +59,7 @@ int main(int argc, char* argv[])
 		{
 			out << "Cute Chess " << CUTECHESS_VERSION << endl;
 			out << "Using Qt version " << qVersion() << endl << endl;
-			out << "Copyright (C) 2008-2015 Ilari Pihlajisto and Arto Jonsson" << endl;
+			out << "Copyright (C) 2008-2018 Ilari Pihlajisto and Arto Jonsson" << endl;
 			out << "This is free software; see the source for copying ";
 			out << "conditions.  There is NO" << endl << "warranty; not even for ";
 			out << "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";

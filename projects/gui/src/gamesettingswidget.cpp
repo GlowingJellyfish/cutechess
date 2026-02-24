@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -76,6 +77,9 @@ GameSettingsWidget::GameSettingsWidget(QWidget *parent)
 	connect(ui->m_resignMoveCountSpin, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int value)
 	{
 		ui->m_resignScoreSpin->setEnabled(value > 0);
+		bool enabled = ui->m_drawAdjudicationGroup->isEnabled() && value > 0;
+		ui->m_resignNormalRadio->setEnabled(enabled);
+		ui->m_resignTwoSidedRadio->setEnabled(enabled);
 	});
 
 	m_defaultPalette = ui->m_fenEdit->palette();
@@ -137,7 +141,10 @@ GameAdjudicator GameSettingsWidget::adjudicator() const
 			     ui->m_drawMoveCountSpin->value(),
 			     ui->m_drawScoreSpin->value());
 	ret.setResignThreshold(ui->m_resignMoveCountSpin->value(),
-			       -ui->m_resignScoreSpin->value());
+			       -ui->m_resignScoreSpin->value(),
+			       ui->m_resignTwoSidedRadio->isEnabled()
+			       && ui->m_resignTwoSidedRadio->isChecked());
+	ret.setMaximumGameLength(ui->m_maxGameLengthSpin->value());
 	ret.setTablebaseAdjudication(ui->m_tbCheck->isChecked());
 
 	return ret;
@@ -154,7 +161,7 @@ OpeningSuite* GameSettingsWidget::openingSuite() const
 		return nullptr;
 
 	OpeningSuite::Format format = OpeningSuite::PgnFormat;
-	if (file.toLower().endsWith(".epd"))
+	if (file.endsWith(".epd"), Qt::CaseInsensitive)
 		format = OpeningSuite::EpdFormat;
 
 	OpeningSuite::Order order = OpeningSuite::SequentialOrder;
@@ -250,6 +257,11 @@ void GameSettingsWidget::readSettings()
 	s.beginGroup("resign_adjudication");
 	ui->m_resignMoveCountSpin->setValue(s.value("move_count").toInt());
 	ui->m_resignScoreSpin->setValue(s.value("score").toInt());
+	ui->m_resignTwoSidedRadio->setChecked(s.value("two_sided").toBool());
+	s.endGroup();
+
+	s.beginGroup("game_length");
+	ui->m_maxGameLengthSpin->setValue(s.value("max_moves", 0).toInt());
 	s.endGroup();
 
 	ui->m_tbCheck->setChecked(tbOk && s.value("use_tb").toBool());
@@ -339,6 +351,16 @@ void GameSettingsWidget::enableSettingsUpdates()
 	{
 		QSettings().setValue("games/resign_adjudication/score", score);
 	});
+	connect(ui->m_resignTwoSidedRadio, &QRadioButton::toggled, [=](bool checked)
+	{
+		QSettings().setValue("games/resign_adjudication/two_sided", checked);
+	});
+
+	connect(ui->m_maxGameLengthSpin, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged),
+		[=](int moveCount)
+	{
+		QSettings().setValue("games/game_length/max_moves", moveCount);
+	});
 
 	connect(ui->m_tbCheck, &QCheckBox::toggled, [=](bool checked)
 	{
@@ -355,6 +377,12 @@ void GameSettingsWidget::onHumanCountChanged(int count)
 {
 	ui->m_drawAdjudicationGroup->setEnabled(count == 0);
 	ui->m_resignAdjudicationGroup->setEnabled(count < 2);
+
+	bool enabled = (count == 0) && ui->m_resignScoreSpin->isEnabled();
+	ui->m_resignNormalRadio->setEnabled(enabled);
+	ui->m_resignTwoSidedRadio->setEnabled(enabled);
+
+	ui->m_gameLengthGroup->setEnabled(count < 2);
 	ui->m_ponderingCheck->setEnabled(count < 2);
 	ui->m_openingBookGroup->setEnabled(count < 2);
 }

@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -129,6 +130,7 @@ void EngineManagementWidget::addEngine()
 	{
 		m_engineManager->addEngine(dlg->engineConfiguration());
 		m_hasChanged = true;
+		updateEngineCount();
 	});
 	dlg->open();
 }
@@ -177,10 +179,10 @@ void EngineManagementWidget::removeEngine()
 
 	if (!selected.isEmpty())
 	{
-		// TODO: use qAsConst() from Qt 5.7
-		foreach (const QModelIndex& index, selected)
+		for (const QModelIndex& index : qAsConst(selected))
 			m_engineManager->removeEngineAt(index.row());
 		m_hasChanged = true;
+		updateEngineCount();
 	}
 }
 

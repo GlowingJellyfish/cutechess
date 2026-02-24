@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +20,7 @@
 
 MoveEvaluation::MoveEvaluation()
 	: m_isBookEval(false),
+	  m_isTrusted(false),
 	  m_depth(0),
 	  m_selDepth(0),
 	  m_score(NULL_SCORE),
@@ -35,6 +37,7 @@ MoveEvaluation::MoveEvaluation()
 bool MoveEvaluation::operator==(const MoveEvaluation& other) const
 {
 	if (m_isBookEval == other.m_isBookEval
+	&&  m_isTrusted == other.m_isTrusted
 	&&  m_depth == other.m_depth
 	&&  m_selDepth == other.m_selDepth
 	&&  m_score == other.m_score
@@ -53,6 +56,7 @@ bool MoveEvaluation::operator==(const MoveEvaluation& other) const
 bool MoveEvaluation::operator!=(const MoveEvaluation& other) const
 {
 	if (m_isBookEval != other.m_isBookEval
+	||  m_isTrusted != other.m_isTrusted
 	||  m_depth != other.m_depth
 	||  m_selDepth != other.m_selDepth
 	||  m_score != other.m_score
@@ -90,6 +94,11 @@ bool MoveEvaluation::isBookEval() const
 	return m_isBookEval;
 }
 
+bool MoveEvaluation::isTrusted() const
+{
+	return m_isTrusted;
+}
+
 int MoveEvaluation::depth() const
 {
 	return m_depth;
@@ -103,6 +112,35 @@ int MoveEvaluation::selectiveDepth() const
 int MoveEvaluation::score() const
 {
 	return m_score;
+}
+
+QString MoveEvaluation::scoreText() const
+{
+	if (isBookEval())
+		return "book";
+	if (m_score == NULL_SCORE)
+		return QString();
+
+	QString str;
+	if (depth() > 0)
+	{
+		int absScore = qAbs(m_score);
+		if (m_score > 0)
+			str += "+";
+
+		// Detect mate-in-n scores
+		if (absScore > MATE_SCORE - 200
+		&&  (absScore = 1000 - (absScore % 1000)) < 200)
+		{
+			if (m_score < 0)
+				str += "-";
+			str += "M" + QString::number(absScore);
+		}
+		else
+			str += QString::number(double(m_score) / 100.0, 'f', 2);
+	}
+
+	return str;
 }
 
 int MoveEvaluation::time() const
@@ -172,6 +210,11 @@ void MoveEvaluation::clear()
 void MoveEvaluation::setBookEval(bool isBookEval)
 {
 	m_isBookEval = isBookEval;
+}
+
+void MoveEvaluation::setIsTrusted(bool isTrusted)
+{
+	m_isTrusted = isTrusted;
 }
 
 void MoveEvaluation::setDepth(int depth)

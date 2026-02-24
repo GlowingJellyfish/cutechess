@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,6 +35,7 @@ class PathLineEdit : public QLineEdit
 		};
 
 		explicit PathLineEdit(PathType pathType, QWidget* parent = nullptr);
+		virtual ~PathLineEdit();
 
 		void setDefaultDirectory(const QString& dir);
 
@@ -42,6 +44,7 @@ class PathLineEdit : public QLineEdit
 
 	private slots:
 		void browse();
+		void setPath(const QString& path);
 
 	private:
 		PathType m_pathType;

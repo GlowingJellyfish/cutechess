@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,10 +27,14 @@ GameAdjudicator::GameAdjudicator()
 	  m_drawScoreCount(0),
 	  m_resignMoveCount(0),
 	  m_resignScore(0),
+	  m_twoSided(false),
+	  m_maxGameLength(0),
 	  m_tbEnabled(false)
 {
 	m_resignScoreCount[0] = 0;
 	m_resignScoreCount[1] = 0;
+	m_winScoreCount[0] = 0;
+	m_winScoreCount[1] = 0;
 }
 
 void GameAdjudicator::setDrawThreshold(int moveNumber, int moveCount, int score)
@@ -43,14 +48,23 @@ void GameAdjudicator::setDrawThreshold(int moveNumber, int moveCount, int score)
 	m_drawScoreCount = 0;
 }
 
-void GameAdjudicator::setResignThreshold(int moveCount, int score)
+void GameAdjudicator::setResignThreshold(int moveCount, int score, bool twoSided)
 {
 	Q_ASSERT(moveCount >= 0);
 
 	m_resignMoveCount = moveCount;
 	m_resignScore = score;
+	m_twoSided = twoSided;
 	m_resignScoreCount[0] = 0;
 	m_resignScoreCount[1] = 0;
+	m_winScoreCount[0] = 0;
+	m_winScoreCount[1] = 0;
+}
+
+void GameAdjudicator::setMaximumGameLength(int moveCount)
+{
+	Q_ASSERT(moveCount >= 0);
+	m_maxGameLength = moveCount;
 }
 
 void GameAdjudicator::setTablebaseAdjudication(bool enable)
@@ -75,6 +89,8 @@ void GameAdjudicator::addEval(const Chess::Board* board, const MoveEvaluation& e
 	{
 		m_drawScoreCount = 0;
 		m_resignScoreCount[side] = 0;
+		m_winScoreCount[side] = 0;
+
 		return;
 	}
 
@@ -85,6 +101,7 @@ void GameAdjudicator::addEval(const Chess::Board* board, const MoveEvaluation& e
 			m_drawScoreCount++;
 		else
 			m_drawScoreCount = 0;
+
 		if (board->plyCount() / 2 >= m_drawMoveNum
 		&&  m_drawScoreCount >= m_drawMoveCount * 2)
 		{
@@ -102,9 +119,35 @@ void GameAdjudicator::addEval(const Chess::Board* board, const MoveEvaluation& e
 		else
 			count = 0;
 
-		if (count >= m_resignMoveCount)
+		int& winCount = m_winScoreCount[side];
+		if (eval.score() >= -m_resignScore)
+			winCount++;
+		else
+			winCount = 0;
+
+		if (count >= m_resignMoveCount
+		&& (!m_twoSided || m_winScoreCount[side.opposite()] >= m_resignMoveCount))
+		{
 			m_result = Chess::Result(Chess::Result::Adjudication,
 						 side.opposite());
+			return;
+		}
+	}
+
+	// Trust-feature
+	if (eval.isTrusted()
+	&&  eval.score() >= eval.MATE_SCORE - 200)
+	{
+		m_result = Chess::Result(Chess::Result::Adjudication, side, "trusted mate score");
+		return;
+	}
+
+	// Limit game length
+	if (m_maxGameLength > 0
+	&&  board->plyCount() >= 2 * m_maxGameLength)
+	{
+		m_result = Chess::Result(Chess::Result::Adjudication, Chess::Side::NoSide);
+		return;
 	}
 }
 

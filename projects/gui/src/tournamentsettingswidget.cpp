@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +48,8 @@ QString TournamentSettingsWidget::tournamentType() const
 		return "gauntlet";
 	else if (ui->m_knockoutRadio->isChecked())
 		return "knockout";
+	else if (ui->m_pyramidRadio->isChecked())
+		return "pyramid";
 
 	Q_UNREACHABLE();
 	return QString();
@@ -82,6 +85,11 @@ bool TournamentSettingsWidget::engineRecovery() const
 	return ui->m_recoverCheck->isChecked();
 }
 
+bool TournamentSettingsWidget::savingOfUnfinishedGames() const
+{
+	return ui->m_saveUnfinishedGamesCheck->isChecked();
+}
+
 void TournamentSettingsWidget::readSettings()
 {
 	QSettings s;
@@ -94,6 +102,8 @@ void TournamentSettingsWidget::readSettings()
 		ui->m_gauntletRadio->setChecked(true);
 	else if (type == "knockout")
 		ui->m_knockoutRadio->setChecked(true);
+	else if (type == "pyramid")
+		ui->m_pyramidRadio->setChecked(true);
 
 	ui->m_seedsSpin->setValue(s.value("seeds", 0).toInt());
 	ui->m_gamesPerEncounterSpin->setValue(s.value("games_per_encounter", 1).toInt());
@@ -102,6 +112,8 @@ void TournamentSettingsWidget::readSettings()
 
 	ui->m_repeatCheck->setChecked(s.value("repeat").toBool());
 	ui->m_recoverCheck->setChecked(s.value("recover").toBool());
+	ui->m_saveUnfinishedGamesCheck->setChecked(
+		s.value("save_unfinished_games", true).toBool());
 
 	s.endGroup();
 }
@@ -122,6 +134,11 @@ void TournamentSettingsWidget::enableSettingsUpdates()
 	{
 		if (checked)
 			QSettings().setValue("tournament/type", "knockout");
+	});
+	connect(ui->m_pyramidRadio, &QRadioButton::toggled, [=](bool checked)
+	{
+		if (checked)
+			QSettings().setValue("tournament/type", "pyramid");
 	});
 
 	connect(ui->m_seedsSpin, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged),
@@ -152,5 +169,9 @@ void TournamentSettingsWidget::enableSettingsUpdates()
 	connect(ui->m_recoverCheck, &QCheckBox::toggled, [=](bool checked)
 	{
 		QSettings().setValue("tournament/recover", checked);
+	});
+	connect(ui->m_saveUnfinishedGamesCheck, &QCheckBox::toggled, [=](bool checked)
+	{
+		QSettings().setValue("tournament/save_unfinished_games", checked);
 	});
 }

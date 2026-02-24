@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -106,7 +107,7 @@ bool OpeningSuite::initialize()
 	if (!m_file->open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		qWarning("Can't open opening suite %s",
-			 qPrintable(m_fileName));
+			 qUtf8Printable(m_fileName));
 		delete m_file;
 		return false;
 	}
@@ -117,7 +118,7 @@ bool OpeningSuite::initialize()
 	if (m_order == RandomOrder)
 	{
 		// Create a shuffled vector of file positions
-		forever
+		for (;;)
 		{
 			FilePosition pos;
 			if (m_format == EpdFormat)

@@ -1,26 +1,32 @@
-FROM debian:wheezy-backports
+FROM ubuntu:trusty
+
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+RUN apt-get update && apt-get install -y software-properties-common python-software-properties && add-apt-repository ppa:beineri/opt-qt571-trusty
+RUN apt-get update && apt-get install -y git qt57base qt57svg build-essential mesa-common-dev libglu1-mesa-dev && rm -rf /var/lib/apt/lists/*
+
+ENV QT_BASE_DIR=/opt/qt57
+ENV QTDIR=$QT_BASE_DIR
+ENV PATH=$QT_BASE_DIR/bin:$PATH
+ENV LD_LIBRARY_PATH=$QT_BASE_DIR/lib/x86_64-linux-gnu:$QT_BASE_DIR/lib:$LD_LIBRARY_PATH
+ENV PKG_CONFIG_PATH=$QT_BASE_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
 
 # Install dependencies and build tools
 RUN \
   apt-get update && apt-get install -y \
-    git \
-    build-essential \
-    qt5-default \
-    qt5-qmake \
-    libqt5svg5-dev \
     ruby-dev \
     rpm \
     wget \
     bsdmainutils \
     zlib1g-dev && \
   gem install fpm && \
-  wget http://mdocml.bsd.lv/snapshots/mdocml.tar.gz && \
-  tar fzx mdocml.tar.gz && \
-  cd mdocml-* && \
+  wget http://mdocml.bsd.lv/snapshots/mandoc.tar.gz && \
+  tar fzx mandoc.tar.gz && \
+  cd mandoc-* && \
   ./configure && make && make install
 
 # Download and build cutechess
 RUN \
+  cd / && \
   git clone https://github.com/cutechess/cutechess.git && \
   cd /cutechess && \
   qmake && \
@@ -66,14 +72,14 @@ RUN \
     -m "Ilari Pihlajisto <ilari.pihlajisto@mbnet.fi>" \
     --description "Commandline and graphical interface for playing chess" \
     -d "libc6 (>= 2.19)" \
-    -d "libgcc1 (>= 1:4.9.2)" \
-    -d "libqt5svg5 (>= 5.3.2)" \
-    -d "libqt5core5a (>= 5.3.2)" \
-    -d "libqt5gui5 (>= 5.3.2)" \
-    -d "libqt5widgets5 (>= 5.3.2)" \
-    -d "libqt5printsupport5 (>= 5.3.2)" \
-    -d "libqt5concurrent5 (>= 5.3.2)" \
-    -d "libstdc++6 (>= 4.9.2)" && \
+    -d "libgcc1 (>= 1:4.9)" \
+    -d "libqt5svg5 (>= 5.7.0)" \
+    -d "libqt5core5a (>= 5.7.0)" \
+    -d "libqt5gui5 (>= 5.7.0)" \
+    -d "libqt5widgets5 (>= 5.7.0)" \
+    -d "libqt5printsupport5 (>= 5.7.0)" \
+    -d "libqt5concurrent5 (>= 5.7.0)" \
+    -d "libstdc++6 (>= 4.8.4)" && \
   mv /cutechess_pkg/*.deb /finished_pkg/ && \
   fpm -s dir -t rpm -C /cutechess_pkg \
     -a "x86_64" \
@@ -85,18 +91,17 @@ RUN \
     --category "Amusements/Games/Board/Chess" \
     -m "Ilari Pihlajisto <ilari.pihlajisto@mbnet.fi>" \
     --description "Commandline and graphical interface for playing chess" \
-    -d "qt5-qtbase >= 5.3.2" \
-    -d "qt5-qtsvg >= 5.3.2" && \
+    -d "qt5-qtbase >= 5.7.0" \
+    -d "qt5-qtsvg >= 5.7.0" && \
   mv /cutechess_pkg/*.rpm /finished_pkg/
 
 # Create .tar.gz package for cutechess-cli
 RUN \
   cd /cutechess && \
-  export CUTECHESS_CLI_GIT_VERSION=$(git describe --tags --match "cli-*") && \
   mkdir -p /cutechess_pkg/cutechess-cli && \
   cd /cutechess_pkg && \
   mkdir -p ./cutechess-cli/lib && \
-  cp /usr/lib/x86_64-linux-gnu/libQt5Core.so.5 cutechess-cli/lib/ && \
+  cp $QT_BASE_DIR/lib/libQt5Core.so.5 cutechess-cli/lib/ && \
   cp /cutechess/projects/cli/cutechess-cli cutechess-cli/ && \
   cp /cutechess/COPYING cutechess-cli/ && \
   cp /cutechess/docs/man-style.css cutechess-cli/ && \
@@ -107,7 +112,8 @@ RUN \
   cp /cutechess/docs/engines.json.5.html cutechess-cli/ && \
   cp /cutechess/docs/engines.json.5.txt cutechess-cli/ && \
   tar -zcvf cutechess-cli-linux64.tar.gz cutechess-cli && \
-  mv cutechess-cli-linux64.tar.gz /finished_pkg/cutechess-$CUTECHESS_CLI_GIT_VERSION-linux64.tar.gz
+  export CUTECHESS_CLI_VERSION=$(grep "^CUTECHESS_CLI_VERSION" /cutechess/projects/cli/cli.pro | awk '{print $NF}') && \
+  mv cutechess-cli-linux64.tar.gz /finished_pkg/cutechess-cli-$CUTECHESS_CLI_VERSION-linux64.tar.gz
 
 # Copy the .deb package to the host
 CMD cp /finished_pkg/cutechess*.* /package

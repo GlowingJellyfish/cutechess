@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -116,7 +117,7 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 
 		/*! Returns a list of supported chess variants. */
 		QStringList variants() const;
-		
+
 	public slots:
 		// Inherited from ChessPlayer
 		virtual void go();
@@ -225,6 +226,10 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 		 * the engine does not support pondering.
 		 */
 		bool pondering() const;
+		/*!
+		 * Gives id number of the engine
+		 */
+		int id() const;
 
 	protected slots:
 		// Inherited from ChessPlayer

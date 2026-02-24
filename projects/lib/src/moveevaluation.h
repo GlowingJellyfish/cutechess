@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,8 +35,11 @@
 class LIB_EXPORT MoveEvaluation
 {
 	public:
+		/*! Mate score reference */
+		constexpr static int MATE_SCORE = 1000000;
+
 		/*! A value for a null or empty score. */
-		static const int NULL_SCORE = 0xFFFFFFF;
+		constexpr static int NULL_SCORE = 0xFFFFFFF;
 
 		/*! Constructs an empty MoveEvaluation object. */
 		MoveEvaluation();
@@ -51,6 +55,9 @@ class LIB_EXPORT MoveEvaluation
 		/*! Returns true if the evaluation points to a book move. */
 		bool isBookEval() const;
 
+		/*! Returns true if the eval is trusted for adjudication. */
+		bool isTrusted() const;
+
 		/*!
 		 * How many plies were searched?
 		 * \note For human players this is always 0.
@@ -65,9 +72,17 @@ class LIB_EXPORT MoveEvaluation
 
 		/*!
 		 * Score in centipawns from the player's point of view.
-		 * \note For human player this always 0.
+		 * \note For human players this always 0.
 		 */
 		int score() const;
+
+		/*!
+		 * String representation of the score from the player's
+		 * point of view. Mate distances are prefixed with -M or +M.
+		 *
+		 * \note For human players an empty string is returned.
+		 */
+		QString scoreText() const;
 
 		/*! Move time in milliseconds. */
 		int time() const;
@@ -126,6 +141,9 @@ class LIB_EXPORT MoveEvaluation
 		/*! Sets book evaluation. */
 		void setBookEval(bool isBookEval);
 
+		/*! Sets trusted property. */
+		void setIsTrusted(bool isTrusted);
+
 		/*! Sets the search depth to \a depth. */
 		void setDepth(int depth);
 
@@ -167,6 +185,7 @@ class LIB_EXPORT MoveEvaluation
 
 	private:
 		bool m_isBookEval;
+		bool m_isTrusted;
 		int m_depth;
 		int m_selDepth;
 		int m_score;

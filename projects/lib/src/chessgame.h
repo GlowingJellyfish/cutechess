@@ -85,6 +85,8 @@ class LIB_EXPORT ChessGame : public QObject
 		void kill();
 		void emitStartFailed();
 		void onMoveMade(const Chess::Move& move);
+		void onAdjudication(const Chess::Result& result);
+		void onResignation(const Chess::Result& result);
 
 	signals:
 		void humanEnabled(bool);
@@ -97,6 +99,7 @@ class LIB_EXPORT ChessGame : public QObject
 				 const QString& sanString,
 				 const QString& comment);
 		void scoreChanged(int ply, int score);
+		void initialized(ChessGame* game = nullptr);
 		void started(ChessGame* game = nullptr);
 		void finished(ChessGame* game = nullptr,
 			      Chess::Result result = Chess::Result());

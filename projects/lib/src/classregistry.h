@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -64,9 +65,9 @@ class ClassRegistry
 			return m_items;
 		}
 		/*! Adds a new factory associated with \a key. */
-		void add(Factory factory, const QString& key)
+		void add(Factory f, const QString& key)
 		{
-			m_items[key] = factory;
+			m_items[key] = f;
 		}
 		/*!
 		 * Creates and returns an object whose type is associated with \a key.

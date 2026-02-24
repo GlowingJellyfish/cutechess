@@ -15,7 +15,7 @@ Binaries for both the GUI and the `cutechess-cli` command-line interface are ava
 Compiling
 ---------
 
-Cute Chess requires Qt 5.5 or greater, a compiler with C++11 support and `qmake`.
+Cute Chess requires Qt 5.7 or greater, a compiler with C++11 support and `qmake`.
 
 In the simplest case you only have to issue:
 
@@ -26,6 +26,9 @@ If you are using the Visual C++ compiler replace `make` with `nmake`.
 
 Documentation is available as Unix manual pages in the `docs/` directory. API
 documentation can be built by issuing `make doc-api` (requires [Doxygen](http://www.doxygen.org/)).
+
+For detailed build instruction on various operating systems please visit:
+* [Making a release](https://github.com/cutechess/cutechess/wiki/Making-a-release)
 
 Running
 -------
@@ -50,4 +53,4 @@ are released under the MIT License.
 Credits
 -------
 
-Cute Chess was written by Ilari Pihlajisto and Arto Jonsson.
+Cute Chess was written by Ilari Pihlajisto, Arto Jonsson and [contributors](https://github.com/cutechess/cutechess/graphs/contributors)

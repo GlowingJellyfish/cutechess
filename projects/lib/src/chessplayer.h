@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -66,6 +67,11 @@ class LIB_EXPORT ChessPlayer : public QObject
 
 		/*! Returns the player's state. */
 		State state() const;
+
+		/*! Returns true if a parsing error occured. */
+		bool hasError() const;
+		/*! Returns a detailed description of the error. */
+		QString errorString() const;
 
 		/*!
 		 * Prepares the player for a new chess game, and then calls
@@ -144,6 +150,13 @@ class LIB_EXPORT ChessPlayer : public QObject
 		/*! Sets result claim validation mode to \a validate. */
 		void setClaimsValidated(bool validate);
 
+		/*!
+		 * If \a enable is true the player will be allowed to continue
+		 * the game after time is out, else the player will forfeit.
+		 */
+		void setCanPlayAfterTimeout(bool enable);
+
+
 	public slots:
 		/*!
 		 * Waits (without blocking) until the player is ready,
@@ -174,14 +187,14 @@ class LIB_EXPORT ChessPlayer : public QObject
 		void disconnected();
 
 		/*! Signals that the player is ready for input. */
-		void ready() const;
+		void ready();
 		
 		/*!
 		 * Signals the time left in the player's clock when they
 		 * start thinking of their next move.
 		 * \param timeLeft Time left in milliseconds.
 		 */
-		void startedThinking(int timeLeft) const;
+		void startedThinking(int timeLeft);
 
 		/*!
 		 * This signal is emitted when the player stops thinking of
@@ -189,25 +202,25 @@ class LIB_EXPORT ChessPlayer : public QObject
 		 * player has made a move - they could've lost the game on
 		 * time, disconnected, etc.
 		 */
-		void stoppedThinking() const;
+		void stoppedThinking();
 
 		/*!
 		 * This signal is emitted when the player's evaluation of the
 		 * current position changes.
 		 */
-		void thinking(const MoveEvaluation& eval) const;
+		void thinking(const MoveEvaluation& eval);
 
 		/*! Signals the player's move. */
-		void moveMade(const Chess::Move& move) const;
+		void moveMade(const Chess::Move& move);
 		
 		/*!
 		 * Emitted when the player claims the game to end
 		 * with result \a result.
 		 */
-		void resultClaim(const Chess::Result& result) const;
+		void resultClaim(const Chess::Result& result);
 
 		/*! Signals a debugging message from the player. */
-		void debugMessage(const QString& data) const;
+		void debugMessage(const QString& data);
 
 		/*! Emitted when player's name is changed. */
 		void nameChanged(const QString& name);
@@ -243,10 +256,8 @@ class LIB_EXPORT ChessPlayer : public QObject
 		virtual void startThinking() = 0;
 
 		/*!
-		 * Returns true if this player can keep player after running
+		 * Returns true if this player can keep playing after running
 		 * out of time; otherwise returns false.
-		 *
-		 * By default this method always returns false.
 		 */
 		virtual bool canPlayAfterTimeout() const;
 
@@ -271,6 +282,9 @@ class LIB_EXPORT ChessPlayer : public QObject
 
 		/*! Sets the player's state to \a state. */
 		void setState(State state);
+
+		/*! Sets the current error to \a error. */
+		void setError(const QString& error);
 		
 		/*!
 		 * Move evaluation for the current move.
@@ -285,11 +299,13 @@ class LIB_EXPORT ChessPlayer : public QObject
 		void startClock();
 
 		QString m_name;
+		QString m_error;
 		State m_state;
 		TimeControl m_timeControl;
 		QTimer* m_timer;
 		bool m_claimedResult;
 		bool m_validateClaims;
+		bool m_canPlayAfterTimeout;
 		Chess::Side m_side;
 		Chess::Board* m_board;
 		ChessPlayer* m_opponent;

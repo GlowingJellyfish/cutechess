@@ -117,6 +117,32 @@ class LIB_EXPORT WesternBoard : public Board
 		 */
 		virtual bool kingCanCapture() const;
 		/*!
+		* Returns true if castling is allowed.
+		* The default value is true.
+		* \sa ShatranjBoard
+		*/
+		virtual bool hasCastling() const;
+		/*!
+		 * Returns true if pawns have an initial double step option.
+		 * The default value is true.
+		 * \sa ShatranjBoard
+		 */
+		virtual bool pawnHasDoubleStep() const;
+		/*!
+		 * Returns true if a pawn can be captured en passant after
+		 * an initial double step.
+		 * The default value is the value of pawnHasDoubleStep().
+		 */
+		virtual bool hasEnPassantCaptures() const;
+		/*!
+		 * Returns true if a rule provides \a side to insert a reserve
+		 * piece at a vacated source \a square immediately after a move.
+		 * The default value is false.
+		 *
+		 * \sa SeirawanBoard
+		 */
+		virtual bool variantHasChanneling(Side side, int square) const;
+		/*!
 		 * Adds pawn promotions to a move list.
 		 *
 		 * This function is called when a pawn can promote by
@@ -131,6 +157,11 @@ class LIB_EXPORT WesternBoard : public Board
 		int kingSquare(Side side) const;
 		/*! Returns the current en-passant square. */
 		int enpassantSquare() const;
+		/*!
+		 * Parse castling rights given by character \a c of the FEN
+		 * token. Returns true if successful.
+		 */
+		virtual bool parseCastlingRights(QChar c);
 		/*!
 		 * Returns true if \a side has a right to castle on \a castlingSide;
 		 * otherwise returns false.
@@ -147,6 +178,10 @@ class LIB_EXPORT WesternBoard : public Board
 		 * capture happens at \a square.
 		 */
 		void removeCastlingRights(int square);
+		/*!
+		 * Removes all castling rights of \a side.
+		 */
+		void removeCastlingRights(Side side);
 		/*!
 		 * Defines the file a king may castle to on \a castlingSide.
 		 * Defaults: 2 (c-file) and width() - 2 (normally g-file)
@@ -210,7 +245,6 @@ class LIB_EXPORT WesternBoard : public Board
 
 		bool canCastle(CastlingSide castlingSide) const;
 		QString castlingRightsString(FenNotation notation) const;
-		bool parseCastlingRights(QChar c);
 		CastlingSide castlingSide(const Move& move) const;
 		void setEnpassantSquare(int square,
 					int target=0);
@@ -227,9 +261,14 @@ class LIB_EXPORT WesternBoard : public Board
 		int m_kingSquare[2];
 		int m_enpassantSquare;
 		int m_enpassantTarget;
+		int m_plyOffset;
 		int m_reversibleMoveCount;
 		bool m_kingCanCapture;
+		bool m_hasCastling;
+		bool m_pawnHasDoubleStep;
+		bool m_hasEnPassantCaptures;
 		bool m_pawnAmbiguous;
+		bool m_multiDigitNotation;
 		QVector<MoveData> m_history;
 		CastlingRights m_castlingRights;
 		int m_castleTarget[2][2];

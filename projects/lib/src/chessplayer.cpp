@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,6 +27,7 @@ ChessPlayer::ChessPlayer(QObject* parent)
 	  m_timer(new QTimer(this)),
 	  m_claimedResult(false),
 	  m_validateClaims(true),
+	  m_canPlayAfterTimeout(false),
 	  m_board(nullptr),
 	  m_opponent(nullptr)
 {
@@ -172,6 +174,16 @@ ChessPlayer::State ChessPlayer::state() const
 	return m_state;
 }
 
+bool ChessPlayer::hasError() const
+{
+	return !m_error.isEmpty();
+}
+
+QString ChessPlayer::errorString() const
+{
+	return m_error;
+}
+
 void ChessPlayer::setState(State state)
 {
 	if (state == m_state)
@@ -180,6 +192,11 @@ void ChessPlayer::setState(State state)
 		emit stoppedThinking();
 
 	m_state = state;
+}
+
+void ChessPlayer::setError(const QString& error)
+{
+	m_error = error;
 }
 
 QString ChessPlayer::name() const
@@ -195,7 +212,12 @@ void ChessPlayer::setName(const QString& name)
 
 bool ChessPlayer::canPlayAfterTimeout() const
 {
-	return false;
+	return m_canPlayAfterTimeout;
+}
+
+void ChessPlayer::setCanPlayAfterTimeout(bool enable)
+{
+        m_canPlayAfterTimeout = enable;
 }
 
 void ChessPlayer::startPondering()
@@ -248,6 +270,7 @@ void ChessPlayer::emitMove(const Chess::Move& move)
 
 	m_timeControl.update();
 	m_eval.setTime(m_timeControl.lastMoveTime());
+	m_eval.setIsTrusted(!areClaimsValidated());
 
 	m_timer->stop();
 	if (m_timeControl.expired() && !canPlayAfterTimeout())

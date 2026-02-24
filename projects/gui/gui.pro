@@ -1,5 +1,5 @@
 macx {
-    TARGET = CuteChess
+    TARGET = "Cute Chess"
 } else {
     TARGET = cutechess
 }
@@ -9,7 +9,7 @@ DESTDIR = $$PWD
 include(../lib/lib.pri)
 include(../lib/libexport.pri)
 
-CUTECHESS_VERSION = 0.9.4
+CUTECHESS_VERSION = 1.1.0
 
 macx-xcode {
     DEFINES += CUTECHESS_VERSION=\"$$CUTECHESS_VERSION\"
@@ -27,6 +27,10 @@ win32 {
 	CONFIG += console
     }
     RC_FILE = res/icons/cutechess_win.rc
+}
+
+!win32-msvc* {
+	QMAKE_CXXFLAGS += -Wextra
 }
 
 macx {

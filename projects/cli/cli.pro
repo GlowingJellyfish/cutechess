@@ -4,7 +4,7 @@ DESTDIR = $$PWD
 include(../lib/lib.pri)
 include(../lib/libexport.pri)
 
-CUTECHESS_CLI_VERSION = 0.8.5
+CUTECHESS_CLI_VERSION = 1.1.0
 
 macx-xcode {
     DEFINES += CUTECHESS_CLI_VERSION=\"$$CUTECHESS_CLI_VERSION\"
@@ -17,6 +17,10 @@ macx-xcode {
 
 win32 {
     CONFIG += console
+}
+
+!win32-msvc* {
+	QMAKE_CXXFLAGS += -Wextra
 }
 
 mac {

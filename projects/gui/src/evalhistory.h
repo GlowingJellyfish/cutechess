@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,6 +24,7 @@
 
 class QCustomPlot;
 class ChessGame;
+class PgnGame;
 
 /*!
  * \brief A widget that shows engines' move evaluation history.
@@ -42,6 +44,8 @@ class EvalHistory : public QWidget
 		 * from the previous game (if any).
 		 */
 		void setGame(ChessGame* game);
+		/*! Sets evaluation history from PGN game (pointer) \a pgn */
+		void setPgnGame(PgnGame *pgn);
 
 	private slots:
 		void onScore(int ply, int score);
@@ -49,6 +53,7 @@ class EvalHistory : public QWidget
 	private:
 		void addData(int ply, int score);
 		void replot(int maxPly);
+		void setScores(const QMap<int, int> &scores);
 
 		QCustomPlot* m_plot;
 		QPointer<ChessGame> m_game;

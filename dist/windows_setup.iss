@@ -4,8 +4,8 @@
 ;#define MinGW
 #define MSVC
 #define MyAppName "Cute Chess"
-#define MyAppVersion "0.9"
-#define MyAppPublisher "Ilari Pihlajisto, Arto Jonsson"
+#define MyAppVersion "1.1.0"
+#define MyAppPublisher "Cute Chess authors"
 #define MyAppURL "https://github.com/cutechess/cutechess"
 #define MyAppExeName "cutechess.exe"
 #define MinGWLibPath "C:\QtSDK\mingw\bin"
@@ -43,6 +43,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#CuteChessPath}\projects\gui\cutechess.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#CuteChessPath}\projects\cli\cutechess-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CuteChessPath}\translations\cutechess_zh_CN.qm"; DestDir: "{app}\translations"; Flags: ignoreversion
 #ifdef MinGW
   Source: "{#MinGWLibPath}\mingwm10.dll"; DestDir: "{app}"; Flags: ignoreversion
   Source: "{#MinGWLibPath}\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion

@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,6 +44,8 @@ class LIB_EXPORT Elo
 		qreal pointRatio() const;
 		/*! Returns the ratio of drawn games. */
 		qreal drawRatio() const;
+		/*! Returns the likelihood of superiority. */
+		qreal LOS() const;
 
 	private:
 		int m_wins;
@@ -52,12 +55,12 @@ class LIB_EXPORT Elo
 		qreal m_stdev;
 
 		// Elo difference
-		qreal diff(qreal p) const;
+		static qreal diff(qreal p);
 		// Inverted error function
-		qreal erfInv(qreal x) const;
+		static qreal erfInv(qreal x);
 		// Quantile function for the standard Gaussian law:
 		// probability -> quantile
-		qreal phiInv(qreal p) const;
+		static qreal phiInv(qreal p);
 };
 
 #endif // ELO_H

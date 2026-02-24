@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +19,9 @@
 #include "enginemanager.h"
 #include <QFile>
 #include <QTextStream>
-#include <jsonparser.h>
-#include <jsonserializer.h>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QJsonArray>
 
 
 EngineManager::EngineManager(QObject* parent)
@@ -79,8 +81,7 @@ bool EngineManager::supportsVariant(const QString& variant) const
 	if (m_engines.isEmpty())
 		return false;
 
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const auto& config, m_engines)
+	for (const auto& config : qAsConst(m_engines))
 	{
 		if (!config.supportsVariant(variant))
 			return false;
@@ -95,23 +96,24 @@ void EngineManager::loadEngines(const QString& fileName)
 		return;
 
 	QFile input(fileName);
-	if (!input.open(QIODevice::ReadOnly | QIODevice::Text))
+	if (!input.open(QIODevice::ReadOnly))
 	{
-		qWarning("cannot open engine configuration file: %s", qPrintable(fileName));
+		qWarning("cannot open engine configuration file for reading: %s",
+			 qUtf8Printable(fileName));
 		return;
 	}
 
-	QTextStream stream(&input);
-	JsonParser parser(stream);
-	const QVariantList engines(parser.parse().toList());
+	auto inputContents = input.readAll();
 
-	if (parser.hasError())
-	{
-		qWarning("%s", qPrintable(QString("bad engine configuration file line %1 in %2: %3")
-			.arg(parser.errorLineNumber()).arg(fileName)
-			.arg(parser.errorString())));
+	QJsonParseError error;
+	auto jsonDoc = QJsonDocument::fromJson(inputContents, &error);
+
+	if (jsonDoc.isNull()) {
+		qWarning("bad engine configuration: %s: %s at offset %d", qUtf8Printable(fileName), qUtf8Printable(error.errorString()), error.offset);
 		return;
 	}
+
+	const QVariantList engines(jsonDoc.array().toVariantList());
 
 	for (const QVariant& engine : engines)
 		addEngine(EngineConfiguration(engine));
@@ -120,27 +122,25 @@ void EngineManager::loadEngines(const QString& fileName)
 void EngineManager::saveEngines(const QString& fileName)
 {
 	QVariantList engines;
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const EngineConfiguration& config, m_engines)
+	for (const EngineConfiguration& config : qAsConst(m_engines))
 		engines << config.toVariant();
 
 	QFile output(fileName);
-	if (!output.open(QIODevice::WriteOnly | QIODevice::Text))
+	if (!output.open(QIODevice::WriteOnly))
 	{
-		qWarning("cannot open engine configuration file: %s", qPrintable(fileName));
+		qWarning("cannot open engine configuration file for writing: %s",
+			 qUtf8Printable(fileName));
 		return;
 	}
 
-	QTextStream out(&output);
-	JsonSerializer serializer(engines);
-	serializer.serialize(out);
+	QJsonDocument jsonDoc(QJsonArray::fromVariantList(engines));
+	output.write(jsonDoc.toJson());
 }
 
 QSet<QString> EngineManager::engineNames() const
 {
 	QSet<QString> names;
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const EngineConfiguration& engine, m_engines)
+	for (const EngineConfiguration& engine : qAsConst(m_engines))
 		names.insert(engine.name());
 
 	return names;

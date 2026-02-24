@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -176,8 +177,7 @@ QVariant EngineConfiguration::toVariant() const
 	if (!m_options.isEmpty())
 	{
 		QVariantList optionsList;
-		// TODO: use qAsConst() from Qt 5.7
-		foreach (const EngineOption* option, m_options)
+		for (const EngineOption* option : qAsConst(m_options))
 			optionsList.append(option->toVariant());
 
 		map.insert("options", optionsList);
@@ -301,16 +301,15 @@ void EngineConfiguration::addOption(EngineOption* option)
 
 void EngineConfiguration::setOption(const QString& name, const QVariant& value)
 {
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (EngineOption* option, m_options)
+	for (EngineOption* option : qAsConst(m_options))
 	{
 		if (option->name() == name)
 		{
 			if (!option->isValid(value))
 			{
 				qWarning("Invalid value for engine option %s: %s",
-					 qPrintable(name),
-					 qPrintable(value.toString()));
+					 qUtf8Printable(name),
+					 qUtf8Printable(value.toString()));
 			}
 			else
 				option->setValue(value);
@@ -382,8 +381,7 @@ EngineConfiguration& EngineConfiguration::operator=(const EngineConfiguration& o
 		qDeleteAll(m_options);
 		m_options.clear();
 
-		// TODO: use qAsConst() from Qt 5.7
-		foreach (const EngineOption* option, other.m_options)
+		for (const EngineOption* option : qAsConst(other.m_options))
 			m_options.append(option->copy());
 	}
 	return *this;

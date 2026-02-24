@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -127,6 +128,11 @@ class LIB_EXPORT Board
 		 * \sa CrazyhouseBoard
 		 */
 		virtual bool variantHasDrops() const;
+		/*!
+		 * Returns true if the board accepts wall squares, else false.
+		 * The default value is false.
+		 */
+		virtual bool variantHasWallSquares() const;
 		/*!
 		 * Returns a list of piece types that can be in the reserve,
 		 * ie. captured pieces that can be dropped on the board.
@@ -319,7 +325,7 @@ class LIB_EXPORT Board
 				  const QString& symbol,
 				  unsigned movement = 0,
 				  const QString & gsymbol = QString());
-		/*! Returns true if \pieceType can move like \a movement. */
+		/*! Returns true if \a pieceType can move like \a movement. */
 		bool pieceHasMovement(int pieceType, unsigned movement) const;
 
 		/*!
@@ -427,7 +433,7 @@ class LIB_EXPORT Board
 		 *
 		 * \param sourceSquare The source square of the hopping piece
 		 * \param offsets An array of offsets for the target square
-		 * \note The generated moves include captures
+		 * \note The generated \a moves include captures
 		 */
 		void generateHoppingMoves(int sourceSquare,
 					  const QVarLengthArray<int>& offsets,
@@ -437,7 +443,7 @@ class LIB_EXPORT Board
 		 *
 		 * \param sourceSquare The source square of the sliding piece
 		 * \param offsets An array of offsets for the target square
-		 * \note The generated moves include captures
+		 * \note The generated \a moves include captures
 		 */
 		void generateSlidingMoves(int sourceSquare,
 					  const QVarLengthArray<int>& offsets,

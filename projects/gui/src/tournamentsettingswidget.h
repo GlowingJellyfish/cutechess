@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,6 +40,7 @@ class TournamentSettingsWidget : public QWidget
 		int delayBetweenGames() const;
 		bool openingRepetition() const;
 		bool engineRecovery() const;
+		bool savingOfUnfinishedGames() const;
 
 		void enableSettingsUpdates();
 

@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -72,7 +73,6 @@ class LIB_EXPORT HumanPlayer : public ChessPlayer
 		
 	protected:
 		// Inherited from ChessPlayer
-		virtual bool canPlayAfterTimeout() const;
 		virtual void startGame();
 		virtual void startThinking();
 

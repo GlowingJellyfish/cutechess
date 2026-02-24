@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,9 +20,11 @@
 #include <QStringList>
 #include <QFile>
 #include <QMetaObject>
+#include <QDateTime>
 #include "board/boardfactory.h"
 #include "econode.h"
 #include "pgnstream.h"
+#include "moveevaluation.h"
 
 namespace {
 
@@ -98,16 +101,19 @@ const QVector<PgnGame::MoveData>& PgnGame::moves() const
 	return m_moves;
 }
 
-void PgnGame::addMove(const MoveData& data)
+void PgnGame::addMove(const MoveData& data, bool addEco)
 {
 	m_moves.append(data);
 
-	m_eco = (m_eco && isStandard()) ? m_eco->child(data.moveString) : nullptr;
-	if (m_eco && m_eco->isLeaf())
-	{
-		setTag("ECO", m_eco->ecoCode());
-		setTag("Opening", m_eco->opening());
-		setTag("Variation", m_eco->variation());
+	if (addEco) {
+		m_eco = (m_eco && isStandard()) ? m_eco->child(data.moveString)
+						: nullptr;
+		if (m_eco && m_eco->isLeaf())
+		{
+			setTag("ECO", m_eco->ecoCode());
+			setTag("Opening", m_eco->opening());
+			setTag("Variation", m_eco->variation());
+		}
 	}
 }
 
@@ -141,11 +147,11 @@ Chess::Board* PgnGame::createBoard() const
 	return board;
 }
 
-bool PgnGame::parseMove(PgnStream& in)
+bool PgnGame::parseMove(PgnStream& in, bool addEco)
 {
 	if (m_tags.isEmpty())
 	{
-		qDebug("No tags found");
+		qWarning("No tags found");
 		return false;
 	}
 
@@ -161,7 +167,7 @@ bool PgnGame::parseMove(PgnStream& in)
 
 		if (!tmp.isEmpty() && !in.setVariant(tmp))
 		{
-			qDebug("Unknown variant: %s", qPrintable(tmp));
+			qWarning("Unknown variant: %s", qUtf8Printable(tmp));
 			return false;
 		}
 		board = in.board();
@@ -173,7 +179,7 @@ bool PgnGame::parseMove(PgnStream& in)
 		{
 			if (board->isRandomVariant())
 			{
-				qDebug("Missing FEN tag");
+				qWarning("Missing FEN tag");
 				return false;
 			}
 			tmp = board->defaultFenString();
@@ -181,7 +187,7 @@ bool PgnGame::parseMove(PgnStream& in)
 
 		if (!board->setFenString(tmp))
 		{
-			qDebug("Invalid FEN string: %s", qPrintable(tmp));
+			qWarning("Invalid FEN string: %s", qUtf8Printable(tmp));
 			return false;
 		}
 		m_startingSide = board->startingSide();
@@ -191,19 +197,19 @@ bool PgnGame::parseMove(PgnStream& in)
 	Chess::Move move(board->moveFromString(str));
 	if (move.isNull())
 	{
-		qDebug("Illegal move: %s", qPrintable(str));
+		qWarning("Illegal move: %s", qUtf8Printable(str));
 		return false;
 	}
 
 	MoveData md = { board->key(), board->genericMove(move),
 			str, QString() };
-	addMove(md);
+	addMove(md, addEco);
 
 	board->makeMove(move);
 	return true;
 }
 
-bool PgnGame::read(PgnStream& in, int maxMoves)
+bool PgnGame::read(PgnStream& in, int maxMoves, bool addEco)
 {
 	clear();
 	if (!in.nextGame())
@@ -219,7 +225,7 @@ bool PgnGame::read(PgnStream& in, int maxMoves)
 			setTag(in.tagName(), in.tagValue());
 			break;
 		case PgnStream::PgnMove:
-			stop = !parseMove(in) || m_moves.size() >= maxMoves;
+			stop = !parseMove(in, addEco) || m_moves.size() >= maxMoves;
 			break;
 		case PgnStream::PgnComment:
 			if (!m_moves.isEmpty())
@@ -231,8 +237,8 @@ bool PgnGame::read(PgnStream& in, int maxMoves)
 				QString result = m_tags.value("Result");
 
 				if (!result.isEmpty() && str != result)
-					qDebug("%s",qPrintable(QString("Line %1: The termination "
-						"marker is different from the result tag").arg(in.lineNumber())));
+					qWarning("%s", qUtf8Printable(QString("Line %1: The termination "
+						 "marker is different from the result tag").arg(in.lineNumber())));
 				setTag("Result", str);
 			}
 			stop = true;
@@ -242,7 +248,7 @@ bool PgnGame::read(PgnStream& in, int maxMoves)
 				bool ok;
 				int nag = in.tokenString().toInt(&ok);
 				if (!ok || nag < 0 || nag > 255)
-					qDebug("Invalid NAG: %s", in.tokenString().constData());
+					qWarning("Invalid NAG: %s", in.tokenString().constData());
 			}
 			break;
 		case PgnStream::NoToken:
@@ -277,6 +283,12 @@ bool PgnGame::write(QTextStream& out, PgnMode mode) const
 	{
 		writeTag(out, "FEN", m_tags["FEN"]);
 		writeTag(out, "SetUp", m_tags["SetUp"]);
+	}
+
+	if (mode == Minimal && m_tags.contains("Variant")
+	&&  variant() != "standard")
+	{
+		writeTag(out, "Variant", m_tags["Variant"]);
 	}
 
 	QString str;
@@ -315,7 +327,9 @@ bool PgnGame::write(QTextStream& out, PgnMode mode) const
 
 		side = !side;
 	}
+
 	str = m_tags.value("Result");
+
 	if (lineLength + str.size() >= 80)
 		out << "\n" << str << "\n\n";
 	else
@@ -385,7 +399,7 @@ QString PgnGame::variant() const
 {
 	if (m_tags.contains("Variant"))
 	{
-		QString variant(m_tags.value("Variant"));
+		QString variant(m_tags.value("Variant").toLower());
 		if ("chess" != variant && "normal" != variant)
 			return variant;
 	}
@@ -515,10 +529,56 @@ void PgnGame::setResultDescription(const QString& description)
 	QString& comment = m_moves.last().comment;
 	if (!comment.isEmpty())
 		comment += ", ";
+
 	comment += description;
 }
 
 void PgnGame::setTagReceiver(QObject* receiver)
 {
 	m_tagReceiver = receiver;
+}
+
+QString PgnGame::timeStamp(const QDateTime& dateTime)
+{
+	return dateTime.toString("yyyy-MM-ddThh:mm:ss.zzz t");
+}
+
+void PgnGame::setGameStartTime(const QDateTime& dateTime)
+{
+	m_gameStartTime = dateTime;
+	setTag("GameStartTime", timeStamp(dateTime));
+}
+
+void PgnGame::setGameEndTime(const QDateTime& dateTime)
+{
+	setTag("GameEndTime", timeStamp(dateTime));
+
+	int d = m_gameStartTime.secsTo(dateTime);
+	QTime time = QTime(d / 3600, d % 3600 / 60, d % 60);
+	setTag("GameDuration", time.toString("hh:mm:ss"));
+}
+
+// HACK
+// TODO: This code won't be needed once we have such GUI game management that
+// ChessGame objects are only deleted when they're no longer available in the GUI.
+QMap< int, int > PgnGame::extractScores() const
+{
+	QMap < int, int > scores;
+
+	for (const auto md: moves())
+	{
+		// Default format: Xboard/concise like {0.35/16 5.1s})
+		// Ref.: ChessGame::evalString and MoveEvaluation::scoreText
+		int count = scores.count();
+		QString s = md.comment.split('/').at(0);
+		bool isMateScore = s.contains('M');
+		if (isMateScore)
+			s.remove('M');
+		int score = 100 * s.toDouble();
+		if (isMateScore)
+			score = score > 0 ? MoveEvaluation::MATE_SCORE - score / 100 
+					  : score / 100 - MoveEvaluation::MATE_SCORE;
+		scores[count] = score;
+	}
+	return scores;
 }

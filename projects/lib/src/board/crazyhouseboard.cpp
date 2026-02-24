@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -189,7 +190,7 @@ void CrazyhouseBoard::vMakeMove(const Move& move, BoardTransition* transition)
 	else if (source == 0)
 		removeFromReserve(Piece(sideToMove(), prom));
 
-	return WesternBoard::vMakeMove(tmp, transition);
+	WesternBoard::vMakeMove(tmp, transition);
 }
 
 void CrazyhouseBoard::vUndoMove(const Move& move)

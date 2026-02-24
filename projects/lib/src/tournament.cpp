@@ -37,6 +37,7 @@ Tournament::Tournament(GameManager* gameManager, QObject *parent)
 	  m_lastGame(nullptr),
 	  m_variant("standard"),
 	  m_round(0),
+	  m_oldRound(-1),
 	  m_nextGameNumber(0),
 	  m_finishedGameCount(0),
 	  m_savedGameCount(0),
@@ -47,13 +48,17 @@ Tournament::Tournament(GameManager* gameManager, QObject *parent)
 	  m_openingDepth(1024),
 	  m_seedCount(0),
 	  m_stopping(false),
-	  m_repeatOpening(false),
+	  m_openingRepetitions(1),
+	  m_openingPolicy(DefaultPolicy),
 	  m_recover(false),
 	  m_pgnCleanup(true),
+	  m_pgnWriteUnfinishedGames(true),
 	  m_finished(false),
 	  m_bookOwnership(false),
 	  m_openingSuite(nullptr),
 	  m_sprt(new Sprt),
+	  m_repetitionCounter(0),
+	  m_swapSides(true),
 	  m_pgnOutMode(PgnGame::Verbose),
 	  m_pair(nullptr)
 {
@@ -69,8 +74,7 @@ Tournament::~Tournament()
 	qDeleteAll(m_pairs);
 
 	QSet<const OpeningBook*> books;
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const TournamentPlayer& player, m_players)
+	for (const TournamentPlayer& player : qAsConst(m_players))
 	{
 		books.insert(player.book());
 		delete player.builder();
@@ -81,6 +85,12 @@ Tournament::~Tournament()
 
 	delete m_openingSuite;
 	delete m_sprt;
+
+	if (m_pgnFile.isOpen())
+		m_pgnFile.close();
+
+	if (m_epdFile.isOpen())
+		m_epdFile.close();
 }
 
 GameManager* Tournament::gameManager() const
@@ -245,14 +255,38 @@ void Tournament::setPgnOutput(const QString& fileName, PgnGame::PgnMode mode)
 	m_pgnOutMode = mode;
 }
 
+void Tournament::setPgnWriteUnfinishedGames(bool enabled)
+{
+	m_pgnWriteUnfinishedGames = enabled;
+}
+
 void Tournament::setPgnCleanupEnabled(bool enabled)
 {
 	m_pgnCleanup = enabled;
 }
 
-void Tournament::setOpeningRepetition(bool repeat)
+void Tournament::setEpdOutput(const QString& fileName)
 {
-	m_repeatOpening = repeat;
+	if (fileName != m_epdFile.fileName())
+	{
+		m_epdFile.close();
+		m_epdFile.setFileName(fileName);
+	}
+}
+
+void Tournament::setOpeningRepetitions(int count)
+{
+	m_openingRepetitions = count;
+}
+
+void Tournament::setOpeningPolicy(Tournament::OpeningPolicy policy)
+{
+	m_openingPolicy = policy;
+}
+
+void Tournament::setSwapSides(bool enabled)
+{
+	m_swapSides = enabled;
 }
 
 void Tournament::setOpeningBookOwnership(bool enabled)
@@ -332,24 +366,27 @@ void Tournament::startGame(TournamentPair* pair)
 	game->setOpeningBook(white.book(), Chess::Side::White, white.bookDepth());
 	game->setOpeningBook(black.book(), Chess::Side::Black, black.bookDepth());
 
-	bool isRepeat = false;
 	if (!m_startFen.isEmpty() || !m_openingMoves.isEmpty())
 	{
 		game->setStartingFen(m_startFen);
 		game->setMoves(m_openingMoves);
 		m_startFen.clear();
 		m_openingMoves.clear();
-		isRepeat = true;
+		m_repetitionCounter++;
 	}
-	else if (m_openingSuite != nullptr)
+	else
 	{
-		if (!game->setMoves(m_openingSuite->nextGame(m_openingDepth)))
-			qWarning("The opening suite is incompatible with the "
-				 "current chess variant");
+		m_repetitionCounter = 1;
+		if (m_openingSuite != nullptr)
+		{
+			if (!game->setMoves(m_openingSuite->nextGame(m_openingDepth)))
+				qWarning("The opening suite is incompatible with the "
+				"current chess variant");
+		}
 	}
 
 	game->generateOpening();
-	if (m_repeatOpening && !isRepeat)
+	if (m_repetitionCounter < m_openingRepetitions)
 	{
 		m_startFen = game->startingFen();
 		if (m_startFen.isEmpty() && board->isRandomVariant())
@@ -380,7 +417,8 @@ void Tournament::startGame(TournamentPair* pair)
 
 	// Make sure the next game (if any) between the pair will
 	// start with reversed colors.
-	m_pair->swapPlayers();
+	if (m_swapSides)
+		m_pair->swapPlayers();
 
 	auto whiteBuilder = white.builder();
 	auto blackBuilder = black.builder();
@@ -418,13 +456,26 @@ void Tournament::startNextGame()
 	if (!pair || !pair->isValid())
 		return;
 
-	if (!pair->hasSamePlayers(m_pair) && m_players.size() > 2)
+	if ((!pair->hasSamePlayers(m_pair) && m_players.size() > 2
+	     && m_openingPolicy != OpeningPolicy::RoundPolicy)
+	|| (m_round > m_oldRound
+	     && m_openingPolicy == OpeningPolicy::RoundPolicy))
 	{
 		m_startFen.clear();
 		m_openingMoves.clear();
+		m_repetitionCounter = 1;
+		m_oldRound = m_round;
 	}
 
 	startGame(pair);
+}
+
+inline bool faulty(const Chess::Result::Type& type)
+{
+	return type == Chess::Result::NoResult
+	    || type == Chess::Result::ResultError
+	    || type == Chess::Result::Disconnection
+	    || type == Chess::Result::StalledConnection;
 }
 
 bool Tournament::writePgn(PgnGame* pgn, int gameNumber)
@@ -441,14 +492,14 @@ bool Tournament::writePgn(PgnGame* pgn, int gameNumber)
 		if (isOpen)
 		{
 			qWarning("PGN file %s does not exist. Reopening...",
-				 qPrintable(m_pgnFile.fileName()));
+				 qUtf8Printable(m_pgnFile.fileName()));
 			m_pgnFile.close();
 		}
 
 		if (!m_pgnFile.open(QIODevice::WriteOnly | QIODevice::Append))
 		{
 			qWarning("Could not open PGN file %s",
-				 qPrintable(m_pgnFile.fileName()));
+				 qUtf8Printable(m_pgnFile.fileName()));
 			return false;
 		}
 		m_pgnOut.setDevice(&m_pgnFile);
@@ -459,12 +510,58 @@ bool Tournament::writePgn(PgnGame* pgn, int gameNumber)
 	while (m_pgnGames.contains(m_savedGameCount + 1))
 	{
 		PgnGame tmp = m_pgnGames.take(++m_savedGameCount);
+		Chess::Result::Type type = tmp.result().type();
+		if (!m_pgnWriteUnfinishedGames
+		&&  (tmp.result().isNone() || (m_stopping && faulty(type))))
+		{
+			qWarning("Omitted incomplete game %d", m_savedGameCount);
+			continue;
+		}
 		if (!tmp.write(m_pgnOut, m_pgnOutMode)
 		||  m_pgnFile.error() != QFile::NoError)
 		{
 			ok = false;
 			qWarning("Could not write PGN game %d", m_savedGameCount);
 		}
+	}
+
+	return ok;
+}
+
+bool Tournament::writeEpd(ChessGame *game)
+{
+	Q_ASSERT(game != nullptr);
+
+	if (m_epdFile.fileName().isEmpty())
+		return true;
+
+	bool isOpen = m_epdFile.isOpen();
+	if (!isOpen || !m_epdFile.exists())
+	{
+		if (isOpen)
+		{
+			qWarning("EPD file %s does not exist. Reopening...",
+				 qUtf8Printable(m_epdFile.fileName()));
+			m_epdFile.close();
+		}
+
+		if (!m_epdFile.open(QIODevice::WriteOnly | QIODevice::Append))
+		{
+			qWarning("Could not open EPD file %s",
+				 qUtf8Printable(m_epdFile.fileName()));
+			return false;
+		}
+		m_epdOut.setDevice(&m_epdFile);
+	}
+
+	const QString& epdPos = game->board()->fenString();
+	m_epdOut << epdPos << "\n";
+	m_epdOut.flush();
+	bool ok = true;
+	if (m_epdFile.error() != QFile::NoError)
+	{
+		ok = false;
+		qWarning("Could not write EPD position");
 	}
 
 	return ok;
@@ -494,7 +591,6 @@ void Tournament::onGameFinished(ChessGame* game)
 	Q_ASSERT(game != nullptr);
 
 	PgnGame* pgn(game->pgn());
-	Chess::Result result(game->result());
 
 	m_finishedGameCount++;
 
@@ -534,9 +630,8 @@ void Tournament::onGameFinished(ChessGame* game)
 		break;
 	}
 
+	writeEpd(game);
 	writePgn(pgn, gameNumber);
-	if (m_pgnCleanup)
-		delete pgn;
 
 	Chess::Result::Type resultType(game->result().type());
 	bool crashed = (resultType == Chess::Result::Disconnection ||
@@ -552,6 +647,9 @@ void Tournament::onGameFinished(ChessGame* game)
 	}
 
 	emit gameFinished(game, gameNumber, iWhite, iBlack);
+
+	if (m_pgnCleanup)
+		delete pgn;
 
 	if (areAllGamesFinished() || (m_stopping && m_gameData.isEmpty()))
 	{
@@ -603,6 +701,9 @@ void Tournament::start()
 	m_finalGameCount = 0;
 	m_stopping = false;
 
+	if (m_openingPolicy == EncounterPolicy || m_openingPolicy == RoundPolicy)
+		setOpeningRepetitions(INT_MAX);
+
 	m_gameData.clear();
 	m_pgnGames.clear();
 	m_startFen.clear();
@@ -649,9 +750,11 @@ QString Tournament::results() const
 
 		if (playerCount() == 2)
 		{
-			ret += QString("Elo difference: %1 +/- %2")
-				.arg(elo.diff(), 0, 'f', 2)
-				.arg(elo.errorMargin(), 0, 'f', 2);
+			ret += QString("Elo difference: %1 +/- %2, LOS: %3 %, DrawRatio: %4 %")
+				.arg(elo.diff(), 0, 'f', 1)
+				.arg(elo.errorMargin(), 0, 'f', 1)
+				.arg(elo.LOS(), 0, 'f', 1)
+				.arg(elo.drawRatio() * 100, 0, 'f', 1);
 			break;
 		}
 
@@ -705,8 +808,9 @@ QString Tournament::results() const
 	||  sprtStatus.lBound != 0.0
 	||  sprtStatus.uBound != 0.0)
 	{
-		QString sprtStr = QString("SPRT: llr %1, lbound %2, ubound %3")
+		QString sprtStr = QString("SPRT: llr %1 (%2%), lbound %3, ubound %4")
 			.arg(sprtStatus.llr, 0, 'g', 3)
+			.arg(sprtStatus.llr / sprtStatus.uBound * 100, 0, 'f', 1)
 			.arg(sprtStatus.lBound, 0, 'g', 3)
 			.arg(sprtStatus.uBound, 0, 'g', 3);
 		if (sprtStatus.result == Sprt::AcceptH0)

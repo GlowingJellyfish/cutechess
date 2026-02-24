@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +21,7 @@
 
 #include <QDialog>
 #include <QItemSelection>
+#include <QListView>
 
 class EngineConfigurationProxyModel;
 
@@ -37,6 +39,7 @@ class EngineSelectionDialog : public QDialog
 		virtual ~EngineSelectionDialog();
 
 		QItemSelection selection() const;
+		QListView * enginesList() const;
 
 	private:
 		EngineConfigurationProxyModel* m_model;

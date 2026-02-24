@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,4 +44,9 @@ EngineSelectionDialog::~EngineSelectionDialog()
 QItemSelection EngineSelectionDialog::selection() const
 {
 	return m_model->mapSelectionToSource(ui->m_enginesList->selectionModel()->selection());
+}
+
+QListView* EngineSelectionDialog::enginesList() const
+{
+	return ui->m_enginesList;
 }

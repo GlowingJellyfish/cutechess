@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -101,6 +102,13 @@ QVariant EngineConfigurationModel::data(const QModelIndex& index, int role) cons
 		const auto engine = m_engineManager->engineAt(index.row());
 		if (!engine.supportsVariant(m_chessVariant))
 			return QBrush(Qt::red);
+
+		int count = 0;
+		const auto& engines = m_engineManager->engines();
+		for (const EngineConfiguration& engine2: engines)
+			if (engine.name() == engine2.name())
+				if (++count > 1)
+					return QBrush(Qt::gray);
 
 		return QVariant();
 	}

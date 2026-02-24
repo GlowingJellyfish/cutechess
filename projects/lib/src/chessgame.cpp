@@ -31,36 +31,9 @@ QString evalString(const MoveEvaluation& eval)
 	if (eval.isEmpty())
 		return QString();
 
-	QString str;
+	QString str = eval.scoreText();
 	if (eval.depth() > 0)
-	{
-		int score = eval.score();
-		int absScore = qAbs(score);
-		if (score > 0)
-			str += "+";
-
-		// Detect mate-in-n scores
-
-		// convert new CECP mate scores to old ones if needed
-		if (absScore > 99900 && absScore < 100100)
-		{
-			absScore = 200000 - 2 * absScore + 30000;
-			if (score >= absScore)
-				absScore++;
-		}
-
-		if (absScore > 9900
-		&&  (absScore = 1000 - (absScore % 1000)) < 100)
-		{
-			if (score < 0)
-				str += "-";
-			str += "M" + QString::number(absScore);
-		}
-		else
-			str += QString::number(double(score) / 100.0, 'f', 2);
-
 		str += "/" + QString::number(eval.depth()) + " ";
-	}
 
 	int t = eval.time();
 	if (t == 0)
@@ -198,12 +171,17 @@ void ChessGame::stop(bool emitMoveChanged)
 		return;
 	}
 	
+	QDateTime gameEndTime = QDateTime::currentDateTime();
+
 	initializePgn();
 	m_gameInProgress = false;
 	const QVector<PgnGame::MoveData>& moves(m_pgn->moves());
 	int plies = moves.size();
 
 	m_pgn->setTag("PlyCount", QString::number(plies));
+
+	m_pgn->setGameEndTime(gameEndTime);
+
 	m_pgn->setResult(m_result);
 	m_pgn->setResultDescription(m_result.description());
 
@@ -277,7 +255,8 @@ void ChessGame::onMoveMade(const Chess::Move& move)
 	Q_ASSERT(m_board->isLegalMove(move));
 	if (sender != playerToMove())
 	{
-		qDebug("%s tried to make a move on the opponent's turn", qPrintable(sender->name()));
+		qWarning("%s tried to make a move on the opponent's turn",
+			 qUtf8Printable(sender->name()));
 		return;
 	}
 
@@ -337,6 +316,26 @@ void ChessGame::startTurn()
 	}
 }
 
+void ChessGame::onAdjudication(const Chess::Result& result)
+{
+	if (m_finished || result.type() != Chess::Result::Adjudication)
+		return;
+
+	m_result = result;
+
+	stop();
+}
+
+void ChessGame::onResignation(const Chess::Result& result)
+{
+	if (m_finished || result.type() != Chess::Result::Resignation)
+		return;
+
+	m_result = result;
+
+	stop();
+}
+
 void ChessGame::onResultClaim(const Chess::Result& result)
 {
 	if (m_finished)
@@ -357,14 +356,14 @@ void ChessGame::onResultClaim(const Chess::Result& result)
 	else if (!m_gameInProgress && result.winner().isNull())
 	{
 		qWarning("Unexpected result claim from %s: %s",
-			 qPrintable(sender->name()),
-			 qPrintable(result.toVerboseString()));
+			 qUtf8Printable(sender->name()),
+			 qUtf8Printable(result.toVerboseString()));
 	}
 	else if (sender->areClaimsValidated() && result.loser() != sender->side())
 	{
 		qWarning("%s forfeits by invalid result claim: %s",
-			 qPrintable(sender->name()),
-			 qPrintable(result.toVerboseString()));
+			 qUtf8Printable(sender->name()),
+			 qUtf8Printable(result.toVerboseString()));
 		m_result = Chess::Result(Chess::Result::Adjudication,
 					 sender->side().opposite(),
 					 "Invalid result claim");
@@ -391,8 +390,8 @@ Chess::Move ChessGame::bookMove(Chess::Side side)
 	if (!m_board->isLegalMove(move))
 	{
 		qWarning("Illegal opening book move for %s: %s",
-			 qPrintable(side.toString()),
-			 qPrintable(m_board->moveString(move, Chess::Board::LongAlgebraic)));
+			 qUtf8Printable(side.toString()),
+			 qUtf8Printable(m_board->moveString(move, Chess::Board::LongAlgebraic)));
 		return Chess::Move();
 	}
 
@@ -490,8 +489,7 @@ void ChessGame::generateOpening()
 		return;
 
 	// First play moves that are already in the opening
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const Chess::Move& move, m_moves)
+	for (const Chess::Move& move : qAsConst(m_moves))
 	{
 		Q_ASSERT(m_board->isLegalMove(move));
 
@@ -501,7 +499,7 @@ void ChessGame::generateOpening()
 	}
 
 	// Then play the opening book moves
-	forever
+	for (;;)
 	{
 		Chess::Move move = bookMove(m_board->sideToMove());
 		if (move.isNull())
@@ -566,7 +564,7 @@ bool ChessGame::resetBoard()
 
 	if (!m_board->setFenString(fen))
 	{
-		qWarning("Invalid FEN string: %s", qPrintable(fen));
+		qWarning("Invalid FEN string: %s", qUtf8Printable(fen));
 		m_board->reset();
 		if (m_board->isRandomVariant())
 			m_startingFen = m_board->fenString();
@@ -641,6 +639,14 @@ void ChessGame::start()
 	// Start the game in the correct thread
 	connect(this, SIGNAL(playersReady()), this, SLOT(startGame()));
 	QMetaObject::invokeMethod(this, "syncPlayers", Qt::QueuedConnection);
+
+
+	m_result = Chess::Result();
+	emit humanEnabled(false);
+	resetBoard();
+	initializePgn();
+	emit initialized(this);
+	emit fenChanged(m_board->startingFenString());
 }
 
 void ChessGame::pause()
@@ -681,9 +687,6 @@ void ChessGame::initializePgn()
 
 void ChessGame::startGame()
 {
-	m_result = Chess::Result();
-	emit humanEnabled(false);
-
 	disconnect(this, SIGNAL(playersReady()), this, SLOT(startGame()));
 	if (m_finished)
 		return;
@@ -696,21 +699,31 @@ void ChessGame::startGame()
 		Q_ASSERT(player->isReady());
 
 		if (player->state() == ChessPlayer::Disconnected)
+		{
+			setError(tr("Could not initialize player %1: %2")
+			         .arg(player->name()).arg(player->errorString()));
+			m_result = Chess::Result(Chess::Result::ResultError);
+			stop();
+			emitStartFailed();
 			return;
+		}
 		if (!player->supportsVariant(m_board->variant()))
 		{
-			qDebug("%s doesn't support variant %s",
-				qPrintable(player->name()), qPrintable(m_board->variant()));
+			qWarning("%s doesn't support variant %s",
+				 qUtf8Printable(player->name()),
+				 qUtf8Printable(m_board->variant()));
 			m_result = Chess::Result(Chess::Result::ResultError);
 			stop();
 			return;
 		}
 	}
 
-	resetBoard();
-	initializePgn();
+	m_pgn->setPlayerName(Chess::Side::White, m_player[Chess::Side::White]->name());
+	m_pgn->setPlayerName(Chess::Side::Black, m_player[Chess::Side::Black]->name());
+
 	emit started(this);
-	emit fenChanged(m_board->startingFenString());
+	QDateTime gameStartTime = QDateTime::currentDateTime();
+	m_pgn->setGameStartTime(gameStartTime);
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -737,7 +750,7 @@ void ChessGame::startGame()
 
 		if (!m_board->result().isNone())
 		{
-			qDebug("Every move was played from the book");
+			qWarning("Every move was played from the book");
 			m_result = m_board->result();
 			stop();
 			return;

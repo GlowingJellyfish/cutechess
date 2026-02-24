@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -124,7 +125,7 @@ class LIB_EXPORT TimeControl
 		int plyLimit() const;
 
 		/*! Returns the node limit for each move. */
-		int nodeLimit() const;
+		qint64 nodeLimit() const;
 
 		/*!
 		 * Returns the expiry margin.
@@ -164,7 +165,7 @@ class LIB_EXPORT TimeControl
 		void setPlyLimit(int plies);
 
 		/*! Sets the node limit. */
-		void setNodeLimit(int nodes);
+		void setNodeLimit(qint64 nodes);
 
 		/*! Sets the expiry margin. */
 		void setExpiryMargin(int expiryMargin);
@@ -211,7 +212,7 @@ class LIB_EXPORT TimeControl
 		int m_timeLeft;
 		int m_movesLeft;
 		int m_plyLimit;
-		int m_nodeLimit;
+		qint64 m_nodeLimit;
 		int m_lastMoveTime;
 		int m_expiryMargin;
 		bool m_expired;

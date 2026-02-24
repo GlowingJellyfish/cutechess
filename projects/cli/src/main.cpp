@@ -20,6 +20,7 @@
 
 #include <QtGlobal>
 #include <QDebug>
+#include <QLoggingCategory>
 #include <QTextStream>
 #include <QStringList>
 #include <QFile>
@@ -45,13 +46,13 @@
 
 namespace {
 
-EngineMatch* match = nullptr;
+EngineMatch* s_match = nullptr;
 
 void sigintHandler(int param)
 {
 	Q_UNUSED(param);
-	if (match != nullptr)
-		match->stop();
+	if (s_match != nullptr)
+		s_match->stop();
 	else
 		abort();
 }
@@ -207,12 +208,12 @@ bool parseEngine(const QStringList& args, EngineData& data)
 		}
 		else if (name == "nodes")
 		{
-			if (val.toInt() <= 0)
+			if (val.toLongLong() <= 0)
 			{
 				qWarning() << "Invalid node limit:" << val;
 				return false;
 			}
-			data.tc.setNodeLimit(val.toInt());
+			data.tc.setNodeLimit(val.toLongLong());
 		}
 		else if (name == "ponder")
 		{
@@ -244,6 +245,7 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 	parser.addOption("-concurrency", QVariant::Int, 1, 1);
 	parser.addOption("-draw", QVariant::StringList);
 	parser.addOption("-resign", QVariant::StringList);
+	parser.addOption("-maxmoves", QVariant::Int, 1, 1);
 	parser.addOption("-tb", QVariant::String, 1, 1);
 	parser.addOption("-tbpieces", QVariant::Int, 1, 1);
 	parser.addOption("-tbignore50", QVariant::Bool, 0, 0);
@@ -255,8 +257,10 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 	parser.addOption("-debug", QVariant::Bool, 0, 0);
 	parser.addOption("-openings", QVariant::StringList);
 	parser.addOption("-bookmode", QVariant::String);
-	parser.addOption("-pgnout", QVariant::StringList, 1, 2);
-	parser.addOption("-repeat", QVariant::Bool, 0, 0);
+	parser.addOption("-pgnout", QVariant::StringList, 1, 3);
+	parser.addOption("-epdout", QVariant::String, 1, 1);
+	parser.addOption("-repeat", QVariant::Int, 0, 1);
+	parser.addOption("-noswap", QVariant::Bool, 0, 0);
 	parser.addOption("-recover", QVariant::Bool, 0, 0);
 	parser.addOption("-site", QVariant::String, 1, 1);
 	parser.addOption("-wait", QVariant::Int, 1, 1);
@@ -272,7 +276,7 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 	Tournament* tournament = TournamentFactory::create(ttype, manager, parent);
 	if (tournament == nullptr)
 	{
-		qWarning("Invalid tournament type: %s", qPrintable(ttype));
+		qWarning("Invalid tournament type: %s", qUtf8Printable(ttype));
 		return nullptr;
 	}
 
@@ -334,15 +338,23 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 		// Threshold for resign adjudication
 		else if (name == "-resign")
 		{
-			QMap<QString, QString> params = option.toMap("movecount|score");
+			QMap<QString, QString> params = option.toMap("movecount|score|twosided=false");
 			bool countOk = false;
 			bool scoreOk = false;
 			int moveCount = params["movecount"].toInt(&countOk);
 			int score = params["score"].toInt(&scoreOk);
+			bool twoSided = params["twosided"] == "true";
 
 			ok = (countOk && scoreOk);
 			if (ok)
-				adjudicator.setResignThreshold(moveCount, -score);
+				adjudicator.setResignThreshold(moveCount, -score, twoSided);
+		}
+		// Maximum game length before draw adjudication
+		else if (name == "-maxmoves")
+		{
+			ok = value.toInt() >= 0;
+			if (ok)
+				adjudicator.setMaximumGameLength(value.toInt());
 		}
 		// Syzygy tablebase adjudication
 		else if (name == "-tb")
@@ -382,7 +394,7 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 			{
 				qWarning("Tournament \"%s\" does not support "
 					 "user-defined round multipliers",
-					 qPrintable(tournament->type()));
+					 qUtf8Printable(tournament->type()));
 				ok = false;
 			}
 			else
@@ -413,12 +425,15 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 			match->setRatingInterval(value.toInt());
 		// Debugging mode. Prints all engine input and output.
 		else if (name == "-debug")
+		{
+			QLoggingCategory::defaultCategory()->setEnabled(QtDebugMsg, true);
 			match->setDebugMode(true);
+		}
 		// Use an opening suite
 		else if (name == "-openings")
 		{
 			QMap<QString, QString> params =
-				option.toMap("file|format=pgn|order=sequential|plies=1024|start=1");
+				option.toMap("file|format=pgn|order=sequential|plies=1024|start=1|policy=default");
 			ok = !params.isEmpty();
 
 			OpeningSuite::Format format = OpeningSuite::EpdFormat;
@@ -429,7 +444,7 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 			else if (ok)
 			{
 				qWarning("Invalid opening suite format: \"%s\"",
-					 qPrintable(params["format"]));
+					 qUtf8Printable(params["format"]));
 				ok = false;
 			}
 
@@ -441,7 +456,22 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 			else if (ok)
 			{
 				qWarning("Invalid opening selection order: \"%s\"",
-					 qPrintable(params["order"]));
+					 qUtf8Printable(params["order"]));
+				ok = false;
+			}
+
+			using OpeningPolicy = Tournament::OpeningPolicy;
+			OpeningPolicy policy = OpeningPolicy::DefaultPolicy;
+			if (params["policy"] == "default")
+				policy = OpeningPolicy::DefaultPolicy;
+			else if (params["policy"] == "encounter")
+				policy = OpeningPolicy::EncounterPolicy;
+			else if (params["policy"] == "round")
+				policy = OpeningPolicy::RoundPolicy;
+			else if (ok)
+			{
+				qWarning("Invalid opening shift policy: \"%s\"",
+					 qUtf8Printable(params["policy"]));
 				ok = false;
 			}
 
@@ -452,13 +482,14 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 			if (ok)
 			{
 				tournament->setOpeningDepth(plies);
+				tournament->setOpeningPolicy(policy);
 
 				OpeningSuite* suite = new OpeningSuite(params["file"],
 								       format,
 								       order,
 								       start - 1);
 				if (order == OpeningSuite::RandomOrder)
-					qDebug("Indexing opening suite...");
+					qInfo("Indexing opening suite...");
 				ok = suite->initialize();
 				if (ok)
 					tournament->setOpeningSuite(suite);
@@ -481,19 +512,50 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 		{
 			PgnGame::PgnMode mode = PgnGame::Verbose;
 			QStringList list = value.toStringList();
-			if (list.size() == 2)
+			if (list.size() == 2 || list.size() == 3)
 			{
-				if (list.at(1) == "min")
-					mode = PgnGame::Minimal;
-				else
-					ok = false;
+				for (int i = 1; i < list.size(); i++)
+				{
+					if (list.at(i) == "min")
+						mode = PgnGame::Minimal;
+					else if (list.at(i) == "fi")
+						tournament->setPgnWriteUnfinishedGames(false);
+					else
+						ok = false;
+				}
 			}
 			if (ok)
 				tournament->setPgnOutput(list.at(0), mode);
 		}
-		// Play every opening twice, just switch the players' sides
+		// FEN/EPD output file to save positions
+		else if (name == "-epdout")
+		{
+			QString fileName = value.toString();
+			tournament->setEpdOutput(fileName);
+		}
+		// Play every opening twice (default), or multiple times
 		else if (name == "-repeat")
-			tournament->setOpeningRepetition(true);
+		{
+			int rep = value.toInt(&ok);
+
+			if (option.value.type() == QVariant::Bool)
+				rep = 2; // default
+			if (ok && rep >= 1)
+			{
+				tournament->setOpeningRepetitions(rep);
+
+				if (tournament->gamesPerEncounter() % rep)
+					qWarning("%d opening repetitions vs"
+						" %d games per encounter",
+						rep,
+						tournament->gamesPerEncounter());
+			}
+			else
+				ok = false;
+		}
+		// Do not swap sides between paired engines
+		else if (name == "-noswap")
+			tournament->setSwapSides(false);
 		// Recover crashed/stalled engines
 		else if (name == "-recover")
 			tournament->setRecoveryMode(true);
@@ -522,14 +584,14 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 				tournament->setSeedCount(seedCount);
 		}
 		else
-			qFatal("Unknown argument: \"%s\"", qPrintable(name));
+			qFatal("Unknown argument: \"%s\"", qUtf8Printable(name));
 
 		if (!ok)
 		{
 			// Empty values default to boolean type
 			if (value.isValid() && value.type() == QVariant::Bool)
 				qWarning("Empty value for option \"%s\"",
-					 qPrintable(name));
+					 qUtf8Printable(name));
 			else
 			{
 				QString val;
@@ -538,7 +600,7 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 				else
 					val = value.toString();
 				qWarning("Invalid value for option \"%s\": \"%s\"",
-					 qPrintable(name), qPrintable(val));
+					 qUtf8Printable(name), qUtf8Printable(val));
 			}
 
 			delete match;
@@ -632,7 +694,7 @@ int main(int argc, char* argv[])
 		{
 			out << "cutechess-cli " << CUTECHESS_CLI_VERSION << endl;
 			out << "Using Qt version " << qVersion() << endl << endl;
-			out << "Copyright (C) 2008-2016 Ilari Pihlajisto and Arto Jonsson" << endl;
+			out << "Copyright (C) 2008-2018 Ilari Pihlajisto and Arto Jonsson" << endl;
 			out << "This is free software; see the source for copying ";
 			out << "conditions.  There is NO" << endl << "warranty; not even for ";
 			out << "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
@@ -642,8 +704,7 @@ int main(int argc, char* argv[])
 		}
 		else if (arg == "--engines" || arg == "-engines")
 		{
-			const auto app = CuteChessCoreApplication::instance();
-			const auto engines = app->engineManager()->engines();
+			const auto engines = app.engineManager()->engines();
 			for (const auto& engine : engines)
 				out << engine.name() << endl;
 
@@ -658,11 +719,11 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	match = parseMatch(arguments, &app);
-	if (match == nullptr)
+	s_match = parseMatch(arguments, &app);
+	if (s_match == nullptr)
 		return 1;
-	QObject::connect(match, SIGNAL(finished()), &app, SLOT(quit()));
+	QObject::connect(s_match, SIGNAL(finished()), &app, SLOT(quit()));
 
-	match->start();
+	s_match->start();
 	return app.exec();
 }

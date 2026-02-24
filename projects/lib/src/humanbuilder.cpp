@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +19,9 @@
 #include "humanbuilder.h"
 #include "humanplayer.h"
 
-HumanBuilder::HumanBuilder(const QString& name)
-	: PlayerBuilder(name)
+HumanBuilder::HumanBuilder(const QString& name, bool playAfterTimeout)
+	: PlayerBuilder(name),
+	  m_playAfterTimeout(playAfterTimeout)
 {
 }
 
@@ -37,8 +39,10 @@ ChessPlayer* HumanBuilder::create(QObject *receiver,
 
 	ChessPlayer* player = new HumanPlayer(parent);
 	if (!name().isEmpty())
+	{
 		player->setName(name());
-
+		player->setCanPlayAfterTimeout(m_playAfterTimeout);
+	}
 	if (receiver != nullptr && method != nullptr)
 		QObject::connect(player, SIGNAL(debugMessage(QString)),
 				 receiver, method);

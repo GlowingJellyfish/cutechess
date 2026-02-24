@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -222,7 +223,10 @@ void BoardScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 {
 	GraphicsPiece* piece = pieceAt(event->scenePos());
 	if (piece == m_highlightPiece || m_anim != nullptr || m_chooser != nullptr)
-		return QGraphicsScene::mouseMoveEvent(event);
+	{
+		QGraphicsScene::mouseMoveEvent(event);
+		return;
+	}
 
 	if (m_targets.contains(piece)
 	&&  QSettings().value("ui/highlight_legal_moves", true).toBool())
@@ -281,6 +285,13 @@ void BoardScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
 void BoardScene::onTransitionFinished()
 {
+	const auto drops = m_transition.drops();
+	if (m_direction == Backward)
+	{
+		for (const auto& drop : drops)
+			m_reserve->addPiece(m_squares->takePieceAt(drop.target));
+	}
+
 	const auto moves = m_transition.moves();
 	for (const auto& move : moves)
 	{
@@ -290,14 +301,11 @@ void BoardScene::onTransitionFinished()
 			m_squares->movePiece(move.target, move.source);
 	}
 
-	const auto drops = m_transition.drops();
-	for (const auto& drop : drops)
+	if (m_direction == Forward)
 	{
-		if (m_direction == Forward)
+		for (const auto& drop : drops)
 			m_squares->setSquare(drop.target,
 					     m_reserve->takePiece(drop.piece));
-		else
-			m_reserve->addPiece(m_squares->takePieceAt(drop.target));
 	}
 
 	const auto squares = m_transition.squares();
@@ -333,7 +341,7 @@ void BoardScene::onTransitionFinished()
 void BoardScene::onPromotionChosen(const Chess::Piece& promotion)
 {
 	m_chooser = nullptr;
-	if (!promotion.isValid())
+	if (!promotion.isValid() && !m_moves.contains(m_promotionMove))
 	{
 		GraphicsPiece* piece = m_squares->pieceAt(m_promotionMove.sourceSquare());
 		m_anim = pieceAnimation(piece, m_sourcePos);
@@ -546,6 +554,16 @@ void BoardScene::applyTransition(const Chess::BoardTransition& transition,
 	connect(group, SIGNAL(finished()), this, SLOT(onTransitionFinished()));
 	m_anim = group;
 
+	const auto drops = transition.drops();
+	if (direction == Backward)
+	{
+		for (const auto& drop : drops)
+		{
+			GraphicsPiece* piece = m_squares->pieceAt(drop.target);
+			group->addAnimation(pieceAnimation(piece, m_reserve->scenePos()));
+		}
+	}
+
 	const auto moves = transition.moves();
 	for (const auto& move : moves)
 	{
@@ -567,21 +585,15 @@ void BoardScene::applyTransition(const Chess::BoardTransition& transition,
 		group->addAnimation(pieceAnimation(piece, squarePos(target)));
 	}
 
-	const auto drops = transition.drops();
-	for (const auto& drop : drops)
+	if (direction == Forward)
 	{
-		if (direction == Forward)
+		for (const auto& drop : drops)
 		{
 			addMoveArrow(m_squares->mapFromItem(m_reserve, QPointF()),
 					 m_squares->squarePos(drop.target));
 
 			GraphicsPiece* piece = m_reserve->piece(drop.piece);
 			group->addAnimation(pieceAnimation(piece, squarePos(drop.target)));
-		}
-		else
-		{
-			GraphicsPiece* piece = m_squares->pieceAt(drop.target);
-			group->addAnimation(pieceAnimation(piece, m_reserve->scenePos()));
 		}
 	}
 

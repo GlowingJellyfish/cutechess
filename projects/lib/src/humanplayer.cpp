@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,17 +19,11 @@
 #include "humanplayer.h"
 #include "board/board.h"
 
-
 HumanPlayer::HumanPlayer(QObject* parent)
 	: ChessPlayer(parent)
 {
 	setState(Idle);
 	setName("Human");
-}
-
-bool HumanPlayer::canPlayAfterTimeout() const
-{
-	return true;
 }
 
 void HumanPlayer::startGame()

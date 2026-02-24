@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,6 +44,9 @@ class SettingsDialog : public QDialog
 
 	private slots:
 		void browseTbPath();
+		void browseDefaultPgnOutFile();
+		void browseTournamentDefaultPgnOutFile();
+		void browseTournamentDefaultEpdOutFile();
 
 	private:
 		void readSettings();

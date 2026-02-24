@@ -91,6 +91,15 @@ NewTournamentDialog::NewTournamentDialog(EngineManager* engineManager,
 		dlg->setAcceptMode(QFileDialog::AcceptSave);
 		dlg->open();
 	});
+	connect(ui->m_browseEpdoutBtn, &QPushButton::clicked, this, [=]()
+	{
+		auto dlg = new QFileDialog(this, tr("Select EPD output file"),
+			QString(), tr("Extended Position Description (*.epd)"));
+		connect(dlg, &QFileDialog::fileSelected, ui->m_epdoutEdit, &QLineEdit::setText);
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
+		dlg->setAcceptMode(QFileDialog::AcceptSave);
+		dlg->open();
+	});
 
 	m_addedEnginesManager = new EngineManager(this);
 	m_addedEnginesModel = new EngineConfigurationModel(
@@ -121,10 +130,29 @@ NewTournamentDialog::~NewTournamentDialog()
 	delete ui;
 }
 
+void NewTournamentDialog::addEngineOnDblClick(const QModelIndex& index)
+{
+	const QListView* listView = ((QListView*)sender());
+	const QModelIndex& idx = m_proxyModel->mapToSource(index);
+
+	m_addedEnginesManager->addEngine(m_srcEngineManager->engineAt(idx.row()));
+	listView->selectionModel()->select(index, QItemSelectionModel::Deselect);
+
+	QPushButton* button = ui->buttonBox->button(QDialogButtonBox::Ok);
+	button->setEnabled(canStart());
+}
+
+
 void NewTournamentDialog::addEngine()
 {
 	EngineSelectionDialog dlg(m_proxyModel);
-	if (dlg.exec() != QDialog::Accepted)
+	connect(dlg.enginesList(), SIGNAL(doubleClicked(QModelIndex)), this,
+		SLOT(addEngineOnDblClick(QModelIndex)));
+	int value = dlg.exec();
+	disconnect(dlg.enginesList(), SIGNAL(doubleClicked(QModelIndex)), this,
+		   SLOT(addEngineOnDblClick(QModelIndex)));
+
+	if (value != QDialog::Accepted)
 		return;
 
 	const QModelIndexList list(dlg.selection().indexes());
@@ -147,8 +175,7 @@ void NewTournamentDialog::removeEngine()
 		return b < a;
 	});
 
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const QModelIndex& index, selected)
+	for (const QModelIndex& index : qAsConst(selected))
 		m_addedEnginesManager->removeEngineAt(index.row());
 
 	QPushButton* button = ui->buttonBox->button(QDialogButtonBox::Ok);
@@ -169,6 +196,9 @@ void NewTournamentDialog::configureEngine(const QModelIndex& index)
 
 	if (dlg.exec() == QDialog::Accepted)
 		m_addedEnginesManager->updateEngineAt(row, dlg.engineConfiguration());
+
+	QPushButton* button = ui->buttonBox->button(QDialogButtonBox::Ok);
+	button->setEnabled(canStart());
 }
 
 void NewTournamentDialog::moveEngine(int offset)
@@ -191,6 +221,17 @@ bool NewTournamentDialog::canStart() const
 
 	if (m_addedEnginesManager->engineCount() < 2)
 		return false;
+
+	QPushButton* button = ui->buttonBox->button(QDialogButtonBox::Ok);
+
+	// check for duplicate configuration names
+	if (m_addedEnginesManager->engineNames().count()
+	!=  m_addedEnginesManager->engineCount())
+	{
+		button->setText(tr("Resolve Duplicates!"));
+		return false;
+	}
+	button->setText("&OK");
 
 	QString variant = ui->m_gameSettings->chessVariant();
 	return m_addedEnginesManager->supportsVariant(variant);
@@ -236,6 +277,7 @@ Tournament* NewTournamentDialog::createTournament(GameManager* gameManager) cons
 	t->setSite(ui->m_siteEdit->text());
 	t->setVariant(ui->m_gameSettings->chessVariant());
 	t->setPgnOutput(ui->m_pgnoutEdit->text());
+	t->setEpdOutput(ui->m_epdoutEdit->text());
 
 	t->setSeedCount(ts->seedCount());
 	t->setGamesPerEncounter(ts->gamesPerEncounter());
@@ -252,8 +294,9 @@ Tournament* NewTournamentDialog::createTournament(GameManager* gameManager) cons
 	auto book = ui->m_gameSettings->openingBook();
 	int bookDepth = ui->m_gameSettings->bookDepth();
 
-	t->setOpeningRepetition(ts->openingRepetition());
+	t->setOpeningRepetitions(ts->openingRepetition()? 2: 1);
 	t->setRecoveryMode(ts->engineRecovery());
+	t->setPgnWriteUnfinishedGames(ts->savingOfUnfinishedGames());
 
 	const auto engines = m_addedEnginesManager->engines();
 	for (EngineConfiguration config : engines)
@@ -271,4 +314,20 @@ Tournament* NewTournamentDialog::createTournament(GameManager* gameManager) cons
 void NewTournamentDialog::readSettings()
 {
 	ui->m_siteEdit->setText(QSettings().value("pgn/site").toString());
+
+	QString pgnName = ui->m_pgnoutEdit->text();
+	if (pgnName.isEmpty())
+	{
+		pgnName = QSettings().value("tournament/default_pgn_output_file",
+					    QString()).toString();
+		ui->m_pgnoutEdit->setText(pgnName);
+	}
+
+	QString epdName = ui->m_epdoutEdit->text();
+	if (epdName.isEmpty())
+	{
+		epdName = QSettings().value("tournament/default_epd_output_file",
+					    QString()).toString();
+		ui->m_epdoutEdit->setText(epdName);
+	}
 }

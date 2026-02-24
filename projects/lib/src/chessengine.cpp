@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -83,7 +84,7 @@ ChessEngine::ChessEngine(QObject* parent)
 	  m_restartMode(EngineConfiguration::RestartAuto)
 {
 	m_pingTimer->setSingleShot(true);
-	m_pingTimer->setInterval(10000);
+	m_pingTimer->setInterval(15000);
 	connect(m_pingTimer, SIGNAL(timeout()), this, SLOT(onPingTimeout()));
 
 	m_quitTimer->setSingleShot(true);
@@ -91,7 +92,7 @@ ChessEngine::ChessEngine(QObject* parent)
 	connect(m_quitTimer, SIGNAL(timeout()), this, SLOT(onQuitTimeout()));
 
 	m_idleTimer->setSingleShot(true);
-	m_idleTimer->setInterval(10000);
+	m_idleTimer->setInterval(15000);
 	connect(m_idleTimer, SIGNAL(timeout()), this, SLOT(onIdleTimeout()));
 
 	m_protocolStartTimer->setSingleShot(true);
@@ -151,8 +152,7 @@ void ChessEngine::addOption(EngineOption* option)
 
 EngineOption* ChessEngine::getOption(const QString& name) const
 {
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (EngineOption* option, m_options)
+	for (EngineOption* option : qAsConst(m_options))
 	{
 		if (option->alias() == name || option->name() == name)
 			return option;
@@ -172,14 +172,17 @@ void ChessEngine::setOption(const QString& name, const QVariant& value)
 	EngineOption* option = getOption(name);
 	if (option == nullptr)
 	{
-		qDebug("%s doesn't have option %s", qPrintable(this->name()), qPrintable(name));
+		qWarning("%s doesn't have option %s",
+			 qUtf8Printable(this->name()),
+			 qUtf8Printable(name));
 		return;
 	}
 
 	if (!option->isValid(value))
 	{
-		qDebug("Invalid value for option %s: %s", qPrintable(name),
-			qPrintable(value.toString()));
+		qWarning("Invalid value for option %s: %s",
+			 qUtf8Printable(name),
+			 qUtf8Printable(value.toString()));
 		return;
 	}
 
@@ -300,6 +303,11 @@ bool ChessEngine::supportsVariant(const QString& variant) const
 	return m_variants.contains(variant);
 }
 
+int ChessEngine::id() const
+{
+	return m_id;
+}
+
 bool ChessEngine::stopThinking()
 {
 	if (state() == Thinking || isPondering())
@@ -336,8 +344,8 @@ void ChessEngine::kill()
 	if (state() == Disconnected)
 		return;
 
-	qDebug("Terminating process of engine %s(%d)",
-	       qPrintable(name()), m_id);
+	qInfo("Terminating process of engine %s(%d)",
+	      qUtf8Printable(name()), m_id);
 
 	m_pinging = false;
 	m_pingTimer->stop();
@@ -400,8 +408,10 @@ void ChessEngine::pong(bool emitReady)
 
 void ChessEngine::onPingTimeout()
 {
-	qDebug("Engine %s(%d) failed to respond to ping",
-	       qPrintable(name()), m_id);
+	setError(tr("no response to ping"));
+	qWarning("Engine %s(%d): %s",
+	         qUtf8Printable(name()), m_id,
+	         qUtf8Printable(errorString()));
 
 	m_pinging = false;
 	m_writeBuffer.clear();
@@ -428,8 +438,8 @@ void ChessEngine::write(const QString& data, WriteMode mode)
 			  .arg(data));
 
 	if (m_ioDevice->write(data.toLatin1() + "\n") == -1)
-		qDebug("Writing to engine %s(%d) failed",
-		       qPrintable(name()), m_id);
+		qWarning("Writing to engine %s(%d) failed",
+			 qUtf8Printable(name()), m_id);
 }
 
 void ChessEngine::onReadyRead()
@@ -465,8 +475,7 @@ void ChessEngine::flushWriteBuffer()
 	if (m_pinging || state() == NotStarted)
 		return;
 
-	// TODO: use qAsConst() from Qt 5.7
-	foreach (const QString& line, m_writeBuffer)
+	for (const QString& line : qAsConst(m_writeBuffer))
 		write(line);
 	m_writeBuffer.clear();
 }
@@ -481,8 +490,10 @@ void ChessEngine::onProtocolStartTimeout()
 	if (state() != Starting)
 		return;
 
-	qDebug("Engine %s(%d) did not start the chess protocol in time",
-	       qPrintable(name()), m_id);
+	setError(tr("Chess protocol was not started in time"));
+	qWarning("Engine %s(%d): %s",
+	         qUtf8Printable(name()), m_id,
+	         qUtf8Printable(errorString()));
 	onCrashed();
 }
 
@@ -503,8 +514,10 @@ void ChessEngine::onQuitTimeout()
 void ChessEngine::quit()
 {
 	if (!m_ioDevice || !m_ioDevice->isOpen() || state() == Disconnected)
-		return ChessPlayer::quit();
-
+	{
+		ChessPlayer::quit();
+		return;
+	}
 	disconnect(m_ioDevice, SIGNAL(readChannelFinished()), this, SLOT(onCrashed()));
 	connect(m_ioDevice, SIGNAL(readChannelFinished()), this, SLOT(onQuitTimeout()));
 	sendQuit();

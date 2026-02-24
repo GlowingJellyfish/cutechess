@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +20,7 @@
 #include "roundrobintournament.h"
 #include "gauntlettournament.h"
 #include "knockouttournament.h"
+#include "pyramidtournament.h"
 
 Tournament* TournamentFactory::create(const QString& type,
 				      GameManager* manager,
@@ -30,6 +32,8 @@ Tournament* TournamentFactory::create(const QString& type,
 		return new GauntletTournament(manager, parent);
 	if (type == "knockout")
 		return new KnockoutTournament(manager, parent);
+	if (type == "pyramid")
+		return new PyramidTournament(manager, parent);
 
 	return nullptr;
 }

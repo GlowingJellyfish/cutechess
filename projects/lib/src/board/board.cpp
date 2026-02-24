@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -77,6 +78,11 @@ bool Board::isRandomVariant() const
 }
 
 bool Board::variantHasDrops() const
+{
+	return false;
+}
+
+bool Board::variantHasWallSquares() const
 {
 	return false;
 }
@@ -298,12 +304,12 @@ Square Board::chessSquare(const QString& str) const
 	if (coordinateSystem() == NormalCoordinates)
 	{
 		file = str.at(0).toLatin1() - 'a';
-		rank = str.mid(1).toInt(&ok) - 1;
+		rank = str.midRef(1).toInt(&ok) - 1;
 	}
 	else
 	{
 		int tmp = str.length() - 1;
-		file = m_width - str.left(tmp).toInt(&ok);
+		file = m_width - str.leftRef(tmp).toInt(&ok);
 		rank = m_height - (str.at(tmp).toLatin1() - 'a') - 1;
 	}
 
@@ -348,7 +354,7 @@ QString Board::moveString(const Move& move, MoveNotation notation)
 Move Board::moveFromLanString(const QString& istr)
 {
 	QString str(istr);
-	str.remove(QRegExp("[x+#!?]"));
+	str.remove(QRegExp("[x=+#!?]"));
 	int len = str.length();
 	if (len < 4)
 		return Move();
@@ -368,22 +374,25 @@ Move Board::moveFromLanString(const QString& istr)
 		return Move(0, squareIndex(trg), promotion.type());
 	}
 
-	Square sourceSq(chessSquare(str.mid(0, 2)));
-	Square targetSq(chessSquare(str.mid(2, 2)));
-	if (!isValidSquare(sourceSq) || !isValidSquare(targetSq))
-		return Move();
-
 	if (len > 4)
+		promotion = pieceFromSymbol(str.mid(len - 1));
+
+	if (promotion.isValid())
+		len = len - 1;
+
+	for (int i = 2; i < len - 1; i++)
 	{
-		promotion = pieceFromSymbol(str.mid(len-1));
-		if (!promotion.isValid())
-			return Move();
+		Square sourceSq(chessSquare(str.mid(0, i)));
+		Square targetSq(chessSquare(str.mid(i, len - i)));
+		if (!isValidSquare(sourceSq) || !isValidSquare(targetSq))
+			continue;
+		int source = squareIndex(sourceSq);
+		int target = squareIndex(targetSq);
+
+		return Move(source, target, promotion.type());
 	}
+	return Move();
 
-	int source = squareIndex(sourceSq);
-	int target = squareIndex(targetSq);
-
-	return Move(source, target, promotion.type());
 }
 
 Move Board::moveFromString(const QString& str)
@@ -464,6 +473,9 @@ QString Board::fenString(FenNotation notation) const
 
 			if (pc.isValid())
 				fen += pieceSymbol(pc);
+			else if (pc.isWall())
+				fen += "*";
+
 			i++;
 		}
 		i++;
@@ -473,7 +485,7 @@ QString Board::fenString(FenNotation notation) const
 	if (variantHasDrops())
 	{
 		QString str;
-		for (int i = Side::White; i <= Side::Black; i++)
+		for (i = Side::White; i <= Side::Black; i++)
 		{
 			Side side = Side::Type(i);
 			for (int j = m_reserve[i].size() - 1; j >= 1; j--)
@@ -545,6 +557,15 @@ bool Board::setFenString(const QString& fen)
 			handPieceIndex = i + 1;
 			break;
 		}
+		// Wall square
+		if (c == '*' && variantHasWallSquares())
+		{
+			if (!pieceStr.isEmpty())
+				return false;
+			square++;
+			k++;
+			continue;
+		}
 		// Add empty squares
 		if (c.isDigit())
 		{
@@ -555,7 +576,7 @@ bool Board::setFenString(const QString& fen)
 			int nempty;
 			if (i < (token->length() - 1) && token->at(i + 1).isDigit())
 			{
-				nempty = token->mid(i, 2).toInt();
+				nempty = token->midRef(i, 2).toInt();
 				i++;
 			}
 			else
@@ -583,12 +604,14 @@ bool Board::setFenString(const QString& fen)
 			{
 				setSquare(k++, piece);
 				i += l - 1;
+				pieceStr.clear();
+				square++;
 				break;
 			}
 		}
-
-		pieceStr.clear();
-		square++;
+		// left over: unknown symbols
+		if (!pieceStr.isEmpty())
+			return false;
 	}
 
 	// The board must have exactly 'boardSize' squares and each rank
@@ -733,6 +756,8 @@ void Board::generateHoppingMoves(int sourceSquare,
 	for (int i = 0; i < offsets.size(); i++)
 	{
 		int targetSquare = sourceSquare + offsets[i];
+		if (!isValidSquare(chessSquare(targetSquare)))
+			continue;
 		Piece capture = pieceAt(targetSquare);
 		if (capture.isEmpty() || capture.side() == opSide)
 			moves.append(Move(sourceSquare, targetSquare));

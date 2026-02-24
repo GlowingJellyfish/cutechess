@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -107,5 +108,5 @@ void EngineBuilder::setError(QString* error, const QString& message) const
 	if (error != nullptr)
 		*error = str;
 	else
-		qWarning("%s", qPrintable(str));
+		qWarning("%s", qUtf8Printable(str));
 }

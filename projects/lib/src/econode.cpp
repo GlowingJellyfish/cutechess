@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -118,7 +119,7 @@ void EcoNode::initialize(PgnStream& in)
 	QMap<QString, int> tmpOpenings;
 
 	PgnGame game;
-	while (game.read(in))
+	while (game.read(in, INT_MAX - 1, false))
 	{
 		current = s_root;
 		for (const PgnGame::MoveData& move : game.moves())
@@ -190,7 +191,7 @@ void EcoNode::write(const QString& fileName)
 	QFile file(fileName);
 	if (!file.open(QIODevice::WriteOnly))
 	{
-		qWarning("Could not open file %s", qPrintable(fileName));
+		qWarning("Could not open file %s", qUtf8Printable(fileName));
 		return;
 	}
 
@@ -207,7 +208,7 @@ EcoNode::EcoNode()
 
 EcoNode::~EcoNode()
 {
-	qDeleteAll(m_children.values());
+	qDeleteAll(m_children);
 }
 
 bool EcoNode::isLeaf() const

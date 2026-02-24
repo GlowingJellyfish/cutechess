@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -53,9 +54,21 @@ class LIB_EXPORT GameAdjudicator
 		 * A game will be adjudicated as a loss for the player that
 		 * made the last move if it reports a score that's at least
 		 * \a score centipawns below zero for at least \a moveCount
-		 * consecutive moves.
+		 * consecutive moves. Beyond that the score of the winning
+		 * side must be at least \a score centipawns above zero if
+		 * \a twoSided is true (default: false).
 		 */
-		void setResignThreshold(int moveCount, int score);
+		void setResignThreshold(int moveCount,
+					int score,
+					bool twoSided = false);
+		/*!
+		 * Limits the number of moves playable in a game.
+		 *
+		 * A game will be adjudicated as a draw when the number of
+		 * moves played exceeds the limit given by \a moveCount.
+		 * The limit is not in action if set to zero.
+		 */
+		void setMaximumGameLength(int moveCount);
 		/*!
 		 * Sets tablebase adjudication to \a enable.
 		 *
@@ -92,6 +105,9 @@ class LIB_EXPORT GameAdjudicator
 		int m_resignMoveCount;
 		int m_resignScore;
 		int m_resignScoreCount[2];
+		int m_winScoreCount[2];
+		bool m_twoSided;
+		int m_maxGameLength;
 		bool m_tbEnabled;
 		Chess::Result m_result;
 };

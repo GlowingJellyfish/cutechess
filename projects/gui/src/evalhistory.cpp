@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,10 +36,20 @@ EvalHistory::EvalHistory(QWidget *parent)
 	x->setRange(1, 5);
 	x->setTicker(QSharedPointer<QCPAxisTicker>(ticker));
 	x->setSubTicks(false);
+	x->setLabelColor(QApplication::palette().text().color());
+	x->setTickLabelColor(QApplication::palette().text().color());
+	x->setTickPen(QApplication::palette().text().color());
+	x->setBasePen(QApplication::palette().text().color());
 
 	y->setLabel(tr("score"));
 	y->setRange(-1, 1);
 	y->setSubTicks(false);
+	y->setLabelColor(QApplication::palette().text().color());
+	y->setTickLabelColor(QApplication::palette().text().color());
+	y->setTickPen(QApplication::palette().text().color());
+	y->setBasePen(QApplication::palette().text().color());
+
+	m_plot->setBackground(QApplication::palette().window());
 
 	QVBoxLayout* layout = new QVBoxLayout();
 	layout->addWidget(m_plot);
@@ -63,11 +74,24 @@ void EvalHistory::setGame(ChessGame* game)
 	connect(m_game, SIGNAL(scoreChanged(int,int)),
 		this, SLOT(onScore(int,int)));
 
+	setScores(game->scores());
+}
+
+void EvalHistory::setPgnGame(PgnGame* pgn)
+{
+	if (pgn == nullptr || pgn->isNull())
+		return;
+
+	setScores(pgn->extractScores());
+}
+
+void EvalHistory::setScores(const QMap< int, int >& scores)
+{
 	m_plot->addGraph();
 	m_plot->addGraph();
 
-	auto cWhite = QColor("#ffce9e");
-	auto cBlack = QColor("#d18b47");
+	auto cWhite = QColor(0xff, 0xce, 0x9e);
+	auto cBlack = QColor(0xd1, 0x8b, 0x47);
 	auto pWhite = QPen(cWhite.darker(150));
 	pWhite.setWidth(2);
 	auto pBlack = QPen(cBlack.darker());
@@ -80,7 +104,6 @@ void EvalHistory::setGame(ChessGame* game)
 	cBlack.setAlpha(128);
 	m_plot->graph(1)->setBrush(QBrush(cBlack));
 
-	const auto& scores = game->scores();
 	int ply = -1;
 
 	for (auto it = scores.constBegin(); it != scores.constEnd(); ++it)

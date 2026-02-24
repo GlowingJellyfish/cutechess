@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -46,6 +47,7 @@ EvalWidget::EvalWidget(QWidget *parent)
 	auto protoItem = new QTableWidgetItem;
 	protoItem->setTextAlignment(Qt::AlignVCenter | Qt::AlignRight);
 	m_statsTable->setItemPrototype(protoItem);
+	m_statsTable->setWordWrap(false);
 
 	m_pvTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_pvTable->verticalHeader()->hide();
@@ -59,6 +61,7 @@ EvalWidget::EvalWidget(QWidget *parent)
 	m_pvTable->setColumnWidth(2, 100);
 	m_pvTable->setColumnWidth(3, 60);
 	m_pvTable->horizontalHeader()->setStretchLastSection(true);
+	m_pvTable->setWordWrap(false);
 
 	QVBoxLayout* layout = new QVBoxLayout();
 	layout->addWidget(m_statsTable);
@@ -97,8 +100,10 @@ void EvalWidget::onEval(const MoveEvaluation& eval)
 	auto nps = eval.nps();
 	if (nps)
 	{
+		QString npsStr = nps < 10000 ? QString("%1").arg(nps)
+					     : QString("%1k").arg(nps / 1000);
 		auto item = m_statsTable->itemPrototype()->clone();
-		item->setText(QString::number(nps));
+		item->setText(npsStr);
 		m_statsTable->setItem(0, NpsHeader, item);
 	}
 	if (eval.tbHits())
@@ -152,9 +157,7 @@ void EvalWidget::onEval(const MoveEvaluation& eval)
 	if (eval.nodeCount())
 		nodeCount = QString::number(eval.nodeCount());
 
-	QString score;
-	if (eval.score() != MoveEvaluation::NULL_SCORE)
-		score = QString::number(double(eval.score()) / 100.0, 'f', 2);
+	QString score = eval.scoreText();
 
 	QVector<QTableWidgetItem*> items;
 	items << new QTableWidgetItem(depth)

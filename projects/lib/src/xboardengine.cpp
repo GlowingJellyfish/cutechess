@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -134,13 +135,16 @@ void XboardEngine::startGame()
 			write("setboard " + board()->fenString());
 		else
 		{
-			qDebug("%s does not support the setboard command, using the edit command now", qPrintable(name()));
+			qWarning("%s does not support the setboard command, using the edit command now",
+				 qUtf8Printable(name()));
 			write("edit");
 			write("#"); // clear board on engine
-			for (const auto& s: board()->pieceList(Chess::Side::White))
+			const QStringList& whitePieces = board()->pieceList(Chess::Side::White);
+			for (const auto& s: whitePieces)
 				write(s); // set a piece
 			write("c");
-			for (const auto& s: board()->pieceList(Chess::Side::Black))
+			const QStringList& blackPieces = board()->pieceList(Chess::Side::Black);
+			for (const auto& s: blackPieces)
 				write(s); // set a piece
 			write("."); // finished
 		}
@@ -168,7 +172,8 @@ void XboardEngine::startGame()
 		if (m_ftNps)
 			write(QString("st 1\nnps %1").arg(myTc->nodeLimit()));
 		else
-			qDebug("%s doesn't support the nps command", qPrintable(name()));
+			qWarning("%s doesn't support the nps command",
+				 qUtf8Printable(name()));
 	}
 
 	// Show thinking
@@ -281,6 +286,31 @@ QString XboardEngine::moveString(const Chess::Move& move)
 	return board()->moveString(move, m_notation);
 }
 
+// compensation: xboard protocol shifts ranks one down if board height equals ten
+const QString XboardEngine::transformMove(const QString& str, int height, int shift) const
+{
+	if (height != 10)
+	      return str;
+
+	QString ret, num;
+	for (const auto c: str)
+	{
+		if (c.isDigit())
+			num.append(c);
+		else
+		{
+			if (!num.isEmpty())
+				ret.append(QString::number(shift + num.toInt()));
+			num.clear();
+			ret.append(c);
+		}
+	}
+	if (!num.isEmpty())
+		ret.append(QString::number(shift + num.toInt()));
+
+	return ret;
+}
+
 void XboardEngine::makeMove(const Chess::Move& move)
 {
 	Q_ASSERT(!move.isNull());
@@ -304,6 +334,8 @@ void XboardEngine::makeMove(const Chess::Move& move)
 		else if (move != m_nextMove)
 			setForceMode(true);
 	}
+
+	moveString = transformMove(moveString, board()->height(), -1);
 
 	if (m_ftUsermove)
 		write("usermove " + moveString);
@@ -511,8 +543,8 @@ void XboardEngine::setFeature(const QString& name, const QString& val)
 	{
 		EngineOption* option = parseOption(val);
 		if (option == nullptr || !option->isValid())
-			qDebug() << "Invalid Xboard option from" << this->name()
-				 << ":" << val;
+			qWarning() << "Invalid Xboard option from" << this->name()
+				   << ":" << val;
 		else
 			addOption(option);
 	}
@@ -532,6 +564,30 @@ void XboardEngine::setFeature(const QString& name, const QString& val)
 	}
 	
 	write("accepted " + name, Unbuffered);
+}
+
+// shift assumed mate scores further out
+int XboardEngine::adaptScore(int score) const
+{
+	constexpr static int newCECPMateScore = 100000;
+	int absScore = qAbs<int>(score);
+
+	// convert new CECP mate scores to old ones
+	if (absScore > newCECPMateScore
+	&&  absScore < newCECPMateScore + 100)
+	{
+		absScore = 2 * newCECPMateScore - 2 * absScore + m_eval.MATE_SCORE;
+		if (score >= absScore)
+			absScore++;
+	}
+
+	// map assumed mate scores onto equivalents w/ higher absolute values
+	int distance = 1000 - (absScore % 1000);
+	if (absScore > 9900 &&  distance < 100)
+		score = (score > 0) ? m_eval.MATE_SCORE - distance
+				    : -m_eval.MATE_SCORE + distance;
+
+	return score;
 }
 
 void XboardEngine::parseLine(const QString& line)
@@ -601,7 +657,7 @@ void XboardEngine::parseLine(const QString& line)
 		{
 			if (whiteEvalPov() && side() == Chess::Side::Black)
 				val = -val;
-			m_eval.setScore(val);
+			m_eval.setScore(adaptScore(val));
 		}
 
 		// Search time
@@ -639,18 +695,20 @@ void XboardEngine::parseLine(const QString& line)
 			if (state() == FinishingGame)
 				finishGame();
 			else
-				qDebug("Unexpected move from %s", qPrintable(name()));
+				qWarning("Unexpected move from %s",
+					 qUtf8Printable(name()));
 			return;
 		}
 
 		// remove "..." of old format if necessary
 		int mark = (args.indexOf("..."));
-		const QString movestr = mark < 0 ? args : args.mid(4);
+		const QString& movestr = mark < 0 ? args : args.mid(4);
+		const QString& newMovestr = transformMove(movestr, board()->height(), +1);
 
-		Chess::Move move = board()->moveFromString(movestr);
+		Chess::Move move = board()->moveFromString(newMovestr);
 		if (move.isNull())
 		{
-			forfeit(Chess::Result::IllegalMove, movestr);
+			forfeit(Chess::Result::IllegalMove, newMovestr);
 			return;
 		}
 
@@ -699,6 +757,13 @@ void XboardEngine::parseLine(const QString& line)
 
 			pos += rx.matchedLength();
 		}
+	}
+	else if (command.startsWith("Illegal"))
+	{
+		forfeit(Chess::Result::Adjudication,
+			tr("%1 claims illegal %2")
+			.arg(this->side().toString())
+			.arg(args));
 	}
 	else if (command == "Error")
 	{

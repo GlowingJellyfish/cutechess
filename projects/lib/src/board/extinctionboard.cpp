@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -97,8 +98,7 @@ Result ExtinctionBoard::result()
 		Side winner = piece.side().opposite();
 		int type = piece.type();
 		str = tr("Missing %1: %2 wins")
-			.arg(pieceString(type))
-			.arg(winner.toString());
+			.arg(pieceString(type), winner.toString());
 		return Result(Result::Win, winner, str);
 	}
 

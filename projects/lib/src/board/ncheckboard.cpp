@@ -1,5 +1,6 @@
 /*
     This file is part of Cute Chess.
+    Copyright (C) 2008-2018 Cute Chess authors
 
     Cute Chess is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -150,8 +151,8 @@ bool NCheckBoard::vSetFenString(const QStringList& fen)
 		if (field.contains('+'))
 		{
 			int marker = field.lastIndexOf('+');
-			int counterW = field.left(marker).toInt();
-			int counterB = field.mid(marker+1).toInt();
+			int counterW = field.leftRef(marker).toInt();
+			int counterB = field.midRef(marker+1).toInt();
 
 			if (counterW < 0 || counterW > maxNCheck
 			||  counterB < 0 || counterB > maxNCheck)
