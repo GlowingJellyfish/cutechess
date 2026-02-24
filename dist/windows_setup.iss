@@ -4,15 +4,12 @@
 ;#define MinGW
 #define MSVC
 #define MyAppName "Cute Chess"
-#define MyAppVersion "1.2.0"
-#define MyAppPublisher "Cute Chess authors"
-#define MyAppURL "https://github.com/cutechess/cutechess"
+;#define MyAppVersion "1.2.0"
 #define MyAppExeName "cutechess.exe"
-#define MinGWLibPath "C:\QtSDK\mingw\bin"
-#define MSVCLibPath "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\1033"
-#define QtLibPath "C:\Qt\5.7\msvc2015_64"
-#define CuteChessPath "C:\cutechess"
-#define DocPath "C:\cutechess_docs"
+;#define MinGWLibPath "C:\QtSDK\mingw\bin"
+;#define MSVCPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+;#define QtLibPath "C:\Qt\5.7\msvc2015_64"
+;#define CuteChessPath "C:\cutechess"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -22,17 +19,16 @@ AppId={{7E0A39B7-4347-4A27-86CF-20E521C86E7C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
-AppPublisher={#MyAppPublisher}
-AppPublisherURL={#MyAppURL}
-AppSupportURL={#MyAppURL}
-AppUpdatesURL={#MyAppURL}
+AppPublisher=Cute Chess authors
+AppPublisherURL=https://github.com/cutechess/cutechess
+AppSupportURL=https://github.com/cutechess/cutechess
+AppUpdatesURL=https://github.com/cutechess/cutechess
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequiredOverridesAllowed=dialog
 AllowNoIcons=yes
 OutputDir=.
-OutputBaseFilename=cutechess_setup
-Compression=lzma
+OutputBaseFilename=cutechess-{#MyAppVersion}-win64
 SolidCompression=yes
 WizardStyle=modern
 
@@ -43,26 +39,32 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#CuteChessPath}\projects\gui\cutechess.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#CuteChessPath}\projects\cli\cutechess-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#CuteChessPath}\translations\cutechess_zh_CN.qm"; DestDir: "{app}\translations"; Flags: ignoreversion
+Source: "{#CuteChessPath}\build\Release\cutechess.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CuteChessPath}\build\Release\cutechess-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+;Source: "{#CuteChessPath}\translations\cutechess_zh_CN.qm"; DestDir: "{app}\translations"; Flags: ignoreversion
 #ifdef MinGW
   Source: "{#MinGWLibPath}\mingwm10.dll"; DestDir: "{app}"; Flags: ignoreversion
   Source: "{#MinGWLibPath}\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 #endif
 #ifdef MSVC
-  Source: "{#MSVCLibPath}\vcredist_x64.exe"; DestDir: "{app}"; Flags: ignoreversion
+  Source: "{#MSVCPath}\VC\Redist\MSVC\v143\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion
 #endif
-Source: "{#QtLibPath}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtLibPath}\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtLibPath}\bin\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtLibPath}\bin\Qt5PrintSupport.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtLibPath}\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtLibPath}\bin\Qt5Concurrent.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6PrintSupport.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6Concurrent.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\bin\Qt6Core5Compat.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtLibPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
-Source: "{#DocPath}\COPYING"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#DocPath}\engines.json.5.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#DocPath}\cutechess-cli.6.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtLibPath}\plugins\styles\qmodernwindowsstyle.dll"; DestDir: "{app}\styles"; Flags: ignoreversion
+Source: "{#QtLibPath}\plugins\iconengines\qsvgicon.dll"; DestDir: "{app}\plugins\iconengines"; Flags: ignoreversion
+Source: "{#QtLibPath}\plugins\imageformats\qsvg.dll"; DestDir: "{app}\plugins\imageformats"; Flags: ignoreversion
+Source: "{#CuteChessPath}\COPYING"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CuteChessPath}\docs\cutechess-cli.6.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CuteChessPath}\docs\cutechess-cli.6.html"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CuteChessPath}\docs\cutechess-engines.json.5.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CuteChessPath}\docs\cutechess-engines.json.5.html"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
@@ -70,6 +72,6 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\vcredist_x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: Installing Visual Studio 2015 RunTime...
+Filename: "{app}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: Installing Microsoft C and C++ (MSVC) runtime libraries...
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 

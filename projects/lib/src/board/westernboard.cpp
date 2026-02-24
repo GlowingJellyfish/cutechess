@@ -246,6 +246,8 @@ QString WesternBoard::sanMoveString(const Move& move)
 		QVarLengthArray<Move> moves;
 		generateMoves(moves, piece.type());
 
+		bool needSomething = false;
+
 		for (int i = 0; i < moves.size(); i++)
 		{
 			const Move& move2 = moves[i];
@@ -258,11 +260,14 @@ QString WesternBoard::sanMoveString(const Move& move)
 				continue;
 
 			Square square2(chessSquare(move2.sourceSquare()));
-			if (square2.file() != square.file())
-				needFile = true;
-			else if (square2.rank() != square.rank())
+			if (square2.file() == square.file())
 				needRank = true;
+			else if (square2.rank() == square.rank())
+				needFile = true;
+			needSomething = true;
 		}
+		if (needSomething && !needRank)
+			needFile = true;
 	}
 	if (needFile)
 		str += QChar('a' + square.file());
@@ -839,6 +844,46 @@ void WesternBoard::setEnpassantSquare(int square, int target)
 	m_enpassantSquare = square;
 }
 
+void WesternBoard::maybeEnableEnpassant(const Move& move)
+{
+	Side side = sideToMove();
+	int source = move.sourceSquare();
+	int target = move.targetSquare();
+	// Note: in some drop variants, piece may be Piece::NoPiece
+	const Piece piece = pieceAt(source);
+
+	// epSq is the square between source and target, i.e. the square
+	// where the pawn would have moved if it only advanced one
+	// square ahead.
+	int epSq = (source + target) / 2;
+	const Piece opPawn(side.opposite(), Pawn);
+	for (const PawnStep& pstep: m_pawnSteps)
+	{
+		if (pstep.type != CaptureStep)
+			continue;
+		int opPawnSq = epSq + pawnPushOffset(pstep, m_sign);
+		if (pieceAt(opPawnSq) == opPawn)
+		{
+			// Only set en-passant square if the capture would not
+			// leave the king in check.
+			setSquare(opPawnSq, Piece::NoPiece);
+			setSquare(source, Piece::NoPiece);
+			setSquare(epSq, opPawn);
+			bool isLegalEnpassant = !inCheck(side.opposite());
+			// Undo changes to board
+			setSquare(opPawnSq, opPawn);
+			setSquare(source, piece);
+			setSquare(epSq, Piece::NoPiece);
+
+			if (isLegalEnpassant)
+			{
+				setEnpassantSquare(epSq, target);
+				return;
+			}
+		}
+	}
+}
+
 void WesternBoard::setCastlingSquare(Side side,
 				     CastlingSide cside,
 				     int square)
@@ -912,7 +957,7 @@ void WesternBoard::vMakeMove(const Move& move, BoardTransition* transition)
 	}
 
 	if (source == target)
-		clearSource = 0;
+		clearSource = false;
 
 	setEnpassantSquare(0);
 
@@ -960,18 +1005,7 @@ void WesternBoard::vMakeMove(const Move& move, BoardTransition* transition)
 		// Push a pawn two squares ahead, creating an en-passant
 		// opportunity for the opponent.
 		else if ((source / m_arwidth - target / m_arwidth) * m_sign == 2)
-		{
-			epSq = (source + target) / 2;
-			const Piece opPawn(side.opposite(), Pawn);
-			for (const PawnStep& pstep: m_pawnSteps)
-			{
-				if (pstep.type == CaptureStep 
-				 && opPawn == pieceAt(epSq + pawnPushOffset(pstep, m_sign)))
-				{
-					setEnpassantSquare(epSq, target);
-				}
-			}
-		}
+			maybeEnableEnpassant(move);
 		else if (promotionType != Piece::NoPiece)
 			pieceType = promotionType;
 	}
@@ -1218,24 +1252,7 @@ bool WesternBoard::isLegalPosition()
 		int source = move.sourceSquare();
 		int target = m_castleTarget[side][cside];
 		int offset = (source <= target) ? 1 : -1;
-		
-		if (source == target)
-		{
-			offset = (cside == KingSide) ? 1 : -1;
-			int i = target - offset;
-			for (;;)
-			{
-				i -= offset;
-				Piece piece(pieceAt(i));
 
-				if (piece.isWall() || piece.side() == side)
-					return true;
-				if (piece.side() == sideToMove()
-				&&  pieceHasCaptureMovement(piece, i, RookMovement))
-					return false;
-			}
-		}
-		
 		for (int i = source; i != target; i += offset)
 		{
 			if (inCheck(side, i))
@@ -1250,10 +1267,22 @@ bool WesternBoard::vIsLegalMove(const Move& move)
 {
 	Q_ASSERT(!move.isNull());
 
-	if (!m_kingCanCapture
-	&&  move.sourceSquare() == m_kingSquare[sideToMove()]
-	&&  captureType(move) != Piece::NoPiece)
-		return false;
+	Side side(sideToMove());
+
+	if (move.sourceSquare() == m_kingSquare[side])
+	{
+		if (!m_kingCanCapture
+		&&  captureType(move) != Piece::NoPiece)
+			return false;
+
+		// No castling when in check
+		Piece piece = pieceAt(move.targetSquare());
+		if (m_hasCastling
+		&&  piece.type() == Rook
+		&&  piece.side() == side
+		&&  inCheck(side))
+			return false;
+	}
 
 	return Board::vIsLegalMove(move);
 }

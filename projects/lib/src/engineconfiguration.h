@@ -44,6 +44,11 @@ class LIB_EXPORT EngineConfiguration
 			RestartOff	//!< The engine is never restarted between games
 		};
 
+		/*! Minimal value for timeout scaling */
+		static constexpr double timeoutScaleMin = 0.2;
+		/*! Maximal value for timeout scaling */
+		static constexpr double timeoutScaleMax = 120.0;
+
 		/*! Creates an empty chess engine configuration. */
 		EngineConfiguration();
 		/*!
@@ -207,6 +212,30 @@ class LIB_EXPORT EngineConfiguration
 		void setClaimsValidated(bool validate);
 
 		/*!
+		 * Returns the timeout scale factor.
+		 *
+		 * A value of 1.0 corresponds to default timeouts.
+		 */
+		double timeoutScale() const;
+		/*!
+		 * Set the protocol timeout scale factor to \a value.
+		 * Values range between 0.01 and 120.
+		 *
+		 * Increasing \a value increases all protocol timeout
+		 * settings. The value of 1.0 corresponds to normal
+		 * timeouts.
+		 */
+		void setTimeoutScale(double value);
+
+		/*!
+		 * Returns true if debug mode is enabled for the engine,
+		 * else false.
+		 */
+		bool debugEnabled() const;
+		/*! Sets the debug mode to \a enabled */
+		void setDebugEnabled(bool enabled);
+
+		/*!
 		 * Assigns \a other to this engine configuration and returns
 		 * a reference to this object.
 		 */
@@ -225,7 +254,9 @@ class LIB_EXPORT EngineConfiguration
 		bool m_whiteEvalPov;
 		bool m_pondering;
 		bool m_validateClaims;
+		double m_timeoutScale;
 		RestartMode m_restartMode;
+		bool m_debugEnabled;
 };
 
 #endif // ENGINE_CONFIGURATION_H

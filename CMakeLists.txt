@@ -254,12 +254,16 @@ add_executable(gui
 	projects/gui/src/gamedatabasemanager.cpp
 	projects/gui/src/pgndatabase.cpp
 	projects/gui/src/pathlineedit.cpp
+	projects/gui/src/pairtimecontroldlg.cpp
 	projects/gui/src/timecontroldlg.cpp
+	projects/gui/src/timecontrolwidget.cpp
 	projects/gui/src/pgnimporter.cpp
 
 	projects/gui/ui/settingsdlg.ui
 	projects/gui/ui/engineconfigdlg.ui
+	projects/gui/ui/pairtimecontroldlg.ui
 	projects/gui/ui/timecontroldlg.ui
+	projects/gui/ui/timecontrolwidget.ui
 	projects/gui/ui/engineselectiondlg.ui
 	projects/gui/ui/importprogressdlg.ui
 	projects/gui/ui/gamedatabasesearchdlg.ui
@@ -286,6 +290,7 @@ endif()
 
 set_target_properties(gui PROPERTIES OUTPUT_NAME cutechess)
 set_target_properties(gui PROPERTIES AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/projects/gui/ui)
+set_target_properties(gui PROPERTIES WIN32_EXECUTABLE ON)
 
 target_include_directories(gui PRIVATE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/projects/gui/3rdparty/qcustomplot>
@@ -323,6 +328,9 @@ endif()
 install(TARGETS cli DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
 install(TARGETS gui DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
 install(FILES dist/linux/cutechess.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications COMPONENT Runtime)
-install(FILES projects/gui/res/icons/cutechess_256x256.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/application/256x256/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_64x64.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/64x64/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_128x128.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_256x256.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps/ RENAME cutechess.png COMPONENT Runtime)
+install(FILES projects/gui/res/icons/cutechess_512x512.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/ RENAME cutechess.png COMPONENT Runtime)
 install(FILES docs/cutechess-cli.6 DESTINATION ${CMAKE_INSTALL_MANDIR}/man6/ COMPONENT Documentation)
-install(FILES docs/engines.json.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5/ COMPONENT Documentation)
+install(FILES docs/cutechess-engines.json.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5/ COMPONENT Documentation)

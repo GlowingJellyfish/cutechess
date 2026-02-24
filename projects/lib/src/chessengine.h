@@ -44,6 +44,11 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 	Q_OBJECT
 
 	public:
+		static constexpr int defaultPingTimeout = 15000;
+		static constexpr int defaultQuitTimeout =  5000;
+		static constexpr int defaultIdleTimeout = 15000;
+		static constexpr int defaultProtocolStartTimeout = 35000;
+
 		/*!
 		 * The write mode used by \a write() when the engine is
 		 * being pinged. This doesn't affect the IO device's
@@ -77,7 +82,7 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 		void start();
 
 		/*! Applies \a configuration to the engine. */
-		void applyConfiguration(const EngineConfiguration& configuration);
+		virtual void applyConfiguration(const EngineConfiguration& configuration);
 
 		/*!
 		 * Sends a ping message (an echo request) to the engine to
@@ -126,6 +131,20 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 		virtual void kill();
 		
 	protected:
+		/*!
+		 * Reads the first whitespace-delimited token from a string
+		 * and returns a pair with the token in the first element
+		 * and the rest of the string in the second element of the pair.
+		 *
+		 * \note Leading and trailing whitespace need to be removed from
+		 * \a sv before calling this function.
+		 *
+		 * If \a sv doesn't contain any whitespace, the whole string
+		 * is returned in the first element of the pair.
+		 *
+		 * If \a sv is empty, a pair of empty QStringView is returned.
+		 */
+		static std::pair<QStringView, QStringView> tokenize(QStringView sv);
 		/*!
 		 * Reads the first whitespace-delimited token from a string
 		 * and returns a QStringRef reference to the token.
@@ -227,6 +246,16 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 		 * the engine does not support pondering.
 		 */
 		bool pondering() const;
+
+		/*!
+		 * Returns true if debugging is enabled for the engine;
+		 * otherwise returns false.
+		 *
+		 * \note Even if debugging is enabled, it's still possible that
+		 * the engine does not support debugging.
+		 */
+		bool debugEnabled() const;
+
 		/*!
 		 * Gives id number of the engine
 		 */
@@ -289,6 +318,8 @@ class LIB_EXPORT ChessEngine : public ChessPlayer
 		bool m_pinging;
 		bool m_whiteEvalPov;
 		bool m_pondering;
+		double m_timeoutScale;
+		bool m_debugEnabled;
 		QTimer* m_pingTimer;
 		QTimer* m_quitTimer;
 		QTimer* m_idleTimer;

@@ -100,6 +100,7 @@ class MainWindow : public QMainWindow
 			QPointer<ChessGame> m_game;
 			PgnGame* m_pgn;
 			Tournament* m_tournament;
+			QString m_titleSuffix;
 			bool m_finished;
 		};
 
@@ -160,6 +161,7 @@ class MainWindow : public QMainWindow
 		QAction* m_showSettingsAct;
 
 		PlainTextLog* m_engineDebugLog;
+		PlainTextLog* m_appDebugLog;
 
 		EvalHistory* m_evalHistory;
 		EvalWidget* m_evalWidgets[2];

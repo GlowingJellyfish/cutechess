@@ -17,7 +17,10 @@ class tst_Board: public QObject
 		
 		void moveStrings_data() const;
 		void moveStrings();
-		
+
+		void sanStrings_data() const;
+		void sanStrings();
+
 		void results_data() const;
 		void results();
 
@@ -208,6 +211,36 @@ void tst_Board::moveStrings_data() const
 		<< "h2a2"
 		<< "8/8/k1K5/8/8/8/7R/8 w - - 99 1"
 		<< "8/8/k1K5/8/8/8/R7/8 b - - 100 1";
+	QTest::newRow("illegal en passant discovered check")
+		<< "standard"
+		<< "e7e5"
+		<< "3b3k/3Rp3/8/r2P4/7K/8/8/NR6 b - - 7 2"
+		<< "3b3k/3R4/8/r2Pp3/7K/8/8/NR6 w - - 0 3";
+	QTest::newRow("illegal en passant horizontal pin")
+		<< "standard"
+		<< "e7e5"
+		<< "b6k/3Rp3/8/r2P3K/8/8/8/NR6 b - - 7 2"
+		<< "b6k/3R4/8/r2Pp2K/8/8/8/NR6 w - - 0 3";
+	QTest::newRow("illegal en passant diagonal pin")
+		<< "standard"
+		<< "e7e5"
+		<< "b6k/3Rp3/8/r2P4/8/8/8/NR5K b - - 7 2"
+		<< "b6k/3R4/8/r2Pp3/8/8/8/NR5K w - - 0 3";
+	QTest::newRow("legal en passant")
+		<< "standard"
+		<< "e7e5"
+		<< "b3r2k/3Rp3/8/3P4/8/8/8/NR2K3 b - - 7 2"
+		<< "b3r2k/3R4/8/3Pp3/8/8/8/NR2K3 w - e6 0 3";
+	QTest::newRow("legal en passant 2")
+		<< "standard"
+		<< "d2d4"
+		<< "8/8/6k1/8/4p3/8/2QP4/3K4 w - - 0 1"
+		<< "8/8/6k1/8/3Pp3/8/2Q5/3K4 b - d3 0 1";
+	QTest::newRow("legal en passant 3")
+		<< "standard"
+		<< "d2d4"
+		<< "8/8/8/4k3/4p3/8/2QP4/3K4 w - - 0 1"
+		<< "8/8/8/4k3/3Pp3/8/2Q5/3K4 b - d3 0 1";
 	QTest::newRow("atomic1")
 		<< "atomic"
 		<< "Rxh3"
@@ -610,6 +643,101 @@ void tst_Board::moveStrings()
 		QCOMPARE(m_board->fenString(), endfen);
 }
 
+void tst_Board::sanStrings_data() const
+{
+	QTest::addColumn<QString>("variant");
+	QTest::addColumn<QString>("fen");
+	QTest::addColumn<QString>("lanmove");
+	QTest::addColumn<QString>("sanmove");
+
+	QTest::newRow("standard e4 opening")
+		<< "standard"
+		<< "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+		<< "e2e4"
+		<< "e4";
+	QTest::newRow("standard Nf3 opening")
+		<< "standard"
+		<< "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+		<< "g1f3"
+		<< "Nf3";
+	QTest::newRow("standard file disambigiation")
+		<< "standard"
+		<< "3r3r/2k5/8/R7/4Q2Q/8/1K6/R6Q b - - 0 1"
+		<< "d8f8"
+		<< "Rdf8";
+	QTest::newRow("standard rank disambiguation")
+		<< "standard"
+		<< "3r3r/2k5/8/R7/4Q2Q/8/1K6/R6Q w - - 0 1"
+		<< "a1a3"
+		<< "R1a3";
+	QTest::newRow("standard file and rank disambiguation")
+		<< "standard"
+		<< "3r3r/2k5/8/R7/4Q2Q/8/1K6/R6Q w - - 0 1"
+		<< "h4e1"
+		<< "Qh4e1";
+	QTest::newRow("standard mate")
+		<< "standard"
+		<< "8/8/8/5R2/8/5K1k/8/8 w - - 0 1"
+		<< "f5h5"
+		<< "Rh5#";
+	QTest::newRow("standard pawn capture with check")
+		<< "standard"
+		<< "r1bqkb1r/ppp1pppp/2n1Pn2/3p4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
+		<< "e6f7"
+		<< "exf7+";
+	QTest::newRow("standard bishop capture")
+		<< "standard"
+		<< "r1bqkb1r/ppp1pppp/2n1Pn2/3p4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+		<< "c8e6"
+		<< "Bxe6";
+	QTest::newRow("standard short castle")
+		<< "standard"
+		<< "rnbqk2r/ppppbppp/5n2/4p3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 4 4"
+		<< "e1g1"
+		<< "O-O";
+	QTest::newRow("standard long castle")
+		<< "standard"
+		<< "r2q1rk1/ppp1bpp1/2n2n1p/3pp3/4P1b1/1PNP1N2/PBPQBPPP/R3K2R w KQ - 0 9"
+		<< "e1c1"
+		<< "O-O-O";
+	QTest::newRow("standard pawn promotion with check")
+		<< "standard"
+		<< "4k3/1P6/8/8/8/8/8/4K3 w - - 0 1"
+		<< "b7b8r"
+		<< "b8=R+";
+	// PR #823: Qb5d3+ -> Q5d3+
+	QTest::newRow("standard rank disambiguation 2")
+		<< "standard"
+		<< "8/1k5p/4P3/1q3b2/6PP/7K/5QR1/1q1q4 b - - 0 53"
+		<< "b5d3"
+		<< "Q5d3+";
+}
+
+void tst_Board::sanStrings()
+{
+	QFETCH(QString, variant);
+	QFETCH(QString, fen);
+	QFETCH(QString, lanmove);
+	QFETCH(QString, sanmove);
+
+	setVariant(variant);
+	QVERIFY(m_board->setFenString(fen));
+
+	// Test that Board generates expected SAN string for lanmove
+	Chess::Move mLan = m_board->moveFromString(lanmove);
+	QVERIFY(m_board->isLegalMove(mLan));
+	QString tSan = m_board->moveString(mLan, Chess::Board::StandardAlgebraic);
+	QCOMPARE(tSan, sanmove);
+
+	// Test that expected SAN string can be parsed into a move
+	// that's understood by Board, and if it's converted back to LAN
+	// format, the string matches lanmove.
+	Chess::Move mSan = m_board->moveFromString(sanmove);
+	QVERIFY(m_board->isLegalMove(mSan));
+	QString tLan = m_board->moveString(mSan, Chess::Board::LongAlgebraic);
+	QCOMPARE(tLan, lanmove);
+}
+
 void tst_Board::results_data() const
 {
 	QTest::addColumn<QString>("variant");
@@ -679,6 +807,12 @@ void tst_Board::results_data() const
 		<< "8/8/k1K5/8/8/8/R7/8 b - - 100 1"
 		<< "1-0";
 
+	variant = "fischerandom";
+
+	QTest::newRow("FRC black win #1")
+		<< variant
+		<< "1k1r4/1pp2b1p/p7/P1B2R2/N7/3P2b1/1PP4Q/RK2r3 w Q - 1 29"
+		<< "0-1";
 
 	variant = "kingofthehill";
 
@@ -1053,6 +1187,13 @@ void tst_Board::perft_data() const
 		<< 6
 		<< Q_UINT64_C(11030083);
 
+	variant = "fischerandom";
+	QTest::newRow("FRC castling #1")
+		<< variant
+		<< "Q3B1kr/p5p1/1p3p1p/2p2P2/2br1N1P/8/P5P1/7K b k - 1 34"
+		<< 2
+		<< Q_UINT64_C(824);
+
 	variant = "capablanca";
 	QTest::newRow("gothic startpos")
 		<< variant
@@ -1221,7 +1362,6 @@ void tst_Board::perft_data() const
 		<< "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 		<< 5 // 4 plies: 197742, 5 plies: 4897256, 6 plies: 120921506
 		<< Q_UINT64_C(4897256);
-
 	variant = "grid";
 	QTest::newRow("grid startpos")
 		<< variant
@@ -1232,7 +1372,12 @@ void tst_Board::perft_data() const
 		<< variant
 		<< "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
 		<< 4
-		<< Q_UINT64_C(1853429);
+		<< Q_UINT64_C(1853380);
+	QTest::newRow("grid pos2a")
+		<< variant
+		<< "r3k2r/p1pPqpb1/bn3np1/4N3/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQkq -"
+		<< 1
+		<< Q_UINT64_C(4);
 	QTest::newRow("grid pos3")
 		<< variant
 		<< "8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - -"

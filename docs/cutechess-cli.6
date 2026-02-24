@@ -496,6 +496,12 @@ Enable pondering if the engine supports it.
 Set the search depth limit.
 .It Ic nodes Ns = Ns Ar count
 Set the node count limit.
+.It Ic tscale Ns = Ns Ar factor
+Scale engine timeouts by
+.Ar factor .
+Only use this option if necessary.
+.It Ic debug
+Activate debug mode (per protocol, UCI only).
 .El
 .Sh EXAMPLES
 Play ten games between two Sloppy engines with a time control of 40
@@ -540,7 +546,7 @@ In each two-game encounter colors are switched between games and the
 same opening line is played in both games.
 .El
 .Sh SEE ALSO
-.Xr engines.json 5
+.Xr cutechess-engines.json 5
 .Sh AUTHORS
 The
 .Nm

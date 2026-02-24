@@ -62,6 +62,9 @@ EngineConfigurationDialog::EngineConfigurationDialog(
 
 	ui->m_protocolCombo->addItems(EngineFactory::protocols());
 
+	ui->m_tscaleSpin->setStyleSheet("QDoubleSpinBox {color: black} \
+					 QDoubleSpinBox[value='1'] {color: #d0d0d0}");
+
 	ui->m_optionsView->setModel(m_engineOptionModel);
 	connect(m_engineOptionModel, SIGNAL(modelReset()),
 		this, SLOT(resizeColumns()));
@@ -91,12 +94,27 @@ EngineConfigurationDialog::EngineConfigurationDialog(
 		[=](const QString& text)
 	{
 		if (text == "xboard")
+		{
 			ui->m_whitePovCheck->setEnabled(true);
+			ui->m_debugCheck->setChecked(false);
+			ui->m_debugCheck->setEnabled(false);
+		}
 		else
 		{
 			ui->m_whitePovCheck->setChecked(false);
 			ui->m_whitePovCheck->setEnabled(false);
+			ui->m_debugCheck->setChecked(false);
 		}
+	});
+
+	connect(ui->m_tscaleSpin,
+		static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+		[=](double value)
+	{
+		if (value != 1.)
+			ui->m_tscaleSpin->setStyleSheet("QDoubleSpinBox {color: black}");
+		else
+			ui->m_tscaleSpin->setStyleSheet("QDoubleSpinBox {color: #d0d0d0}");
 	});
 
 	ui->m_tabs->setTabEnabled(1, false);
@@ -119,10 +137,14 @@ void EngineConfigurationDialog::applyEngineInformation(
 	int i = ui->m_protocolCombo->findText(engine.protocol());
 	ui->m_protocolCombo->setCurrentIndex(i);
 
+	ui->m_tscaleSpin->setValue(engine.timeoutScale());
 	ui->m_initStringEdit->setPlainText(engine.initStrings().join("\n"));
 
 	if (engine.whiteEvalPov())
 		ui->m_whitePovCheck->setCheckState(Qt::Checked);
+
+	if (engine.debugEnabled())
+		ui->m_debugCheck->setCheckState(Qt::Checked);
 
 	const auto options = engine.options();
 	for (const EngineOption* option : options)
@@ -144,12 +166,14 @@ EngineConfiguration EngineConfigurationDialog::engineConfiguration()
 	engine.setCommand(ui->m_commandEdit->text());
 	engine.setWorkingDirectory(ui->m_workingDirEdit->text());
 	engine.setProtocol(ui->m_protocolCombo->currentText());
+	engine.setTimeoutScale(ui->m_tscaleSpin->value());
 
 	QString initStr(ui->m_initStringEdit->toPlainText());
 	if (!initStr.isEmpty())
 		engine.setInitStrings(initStr.split('\n'));
 
 	engine.setWhiteEvalPov(ui->m_whitePovCheck->checkState() == Qt::Checked);
+	engine.setDebugEnabled(ui->m_debugCheck->checkState() == Qt::Checked);
 
 	QList<EngineOption*> optionCopies;
 	for (const EngineOption* option : qAsConst(m_options))

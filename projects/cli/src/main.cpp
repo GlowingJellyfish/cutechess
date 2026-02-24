@@ -144,6 +144,19 @@ bool parseEngine(const QStringList& args, EngineData& data)
 		{
 			data.config.setClaimsValidated(false);
 		}
+		// Scaling timeouts
+		else if (name == "tscale")
+		{
+			bool ok = false;
+			double value = val.toDouble(&ok);
+			if (!ok || value < EngineConfiguration::timeoutScaleMin
+				|| value > EngineConfiguration::timeoutScaleMax)
+			{
+				qWarning() << "Invalid timeout scale factor:" << val;
+				return false;
+			}
+			data.config.setTimeoutScale(value);
+		}
 		// Time control (moves/time+increment)
 		else if (name == "tc")
 		{
@@ -221,6 +234,10 @@ bool parseEngine(const QStringList& args, EngineData& data)
 		{
 			data.config.setPondering(true);
 		}
+		else if (name == "debug")
+		{
+			data.config.setDebugEnabled(true);
+		}
 		// Custom engine option
 		else if (name.startsWith("option."))
 			data.config.setOption(name.section('.', 1), val);
@@ -258,7 +275,7 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 	parser.addOption("-ratinginterval", QVariant::Int, 1, 1);
 	parser.addOption("-outcomeinterval", QVariant::Int, 1, 1);
 	parser.addOption("-resultformat", QVariant::String, 1, 1);
-	parser.addOption("-debug", QVariant::Bool, 0, 0);
+	parser.addOption("-debug", QVariant::String, 0, 1);
 	parser.addOption("-openings", QVariant::StringList);
 	parser.addOption("-bookmode", QVariant::String);
 	parser.addOption("-pgnout", QVariant::StringList, 1, 3);
@@ -454,7 +471,10 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 				for (auto it = map2.constBegin(); it != map2.constEnd(); ++it)
 					qInfo() << qUtf8Printable(it.key()) << "\n  "
 						<< qUtf8Printable(it.value());
-				return 0;
+
+				delete match;
+				delete tournament;
+				return nullptr;
 			}
 			tournament->setResultFormat(value.toString().left(256).trimmed());
 		}
@@ -463,6 +483,10 @@ EngineMatch* parseMatch(const QStringList& args, QObject* parent)
 		{
 			QLoggingCategory::defaultCategory()->setEnabled(QtDebugMsg, true);
 			match->setDebugMode(true);
+			if (value == "all")
+				eachOptions.append("debug");
+			else if (!value.isNull())
+				ok = false;
 		}
 		// Use an opening suite
 		else if (name == "-openings")
@@ -734,7 +758,7 @@ int main(int argc, char* argv[])
 			out << "Using Qt version " << qVersion() << '\n';
 			out << "Running on " << QSysInfo::prettyProductName();
 			out << "/" << QSysInfo::currentCpuArchitecture() << '\n' << '\n';
-			out << "Copyright (C) 2008-2020 Ilari Pihlajisto, Arto Jonsson ";
+			out << "Copyright (C) 2008-2023 Ilari Pihlajisto, Arto Jonsson ";
 			out << "and contributors" << '\n';
 			out << "This is free software; see the source for copying ";
 			out << "conditions.  There is NO" << '\n' << "warranty; not even for ";

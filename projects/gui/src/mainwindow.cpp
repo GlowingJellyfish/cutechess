@@ -52,7 +52,6 @@
 #include "newtournamentdialog.h"
 #include "chessclock.h"
 #include "plaintextlog.h"
-#include "gamedatabasemanager.h"
 #include "pgntagsmodel.h"
 #include "gametabbar.h"
 #include "evalhistory.h"
@@ -71,6 +70,13 @@ MainWindow::TabData::TabData(ChessGame* game, Tournament* tournament)
 	  m_tournament(tournament),
 	  m_finished(false)
 {
+	if (tournament)
+	{
+		int gameNum = tournament->gameNumber(game);
+		int totalGames = tournament->finalGameCount();
+		if (gameNum > 0 && totalGames > 0)
+			m_titleSuffix = tr(" [%1/%2]").arg(gameNum).arg(totalGames);
+	}
 }
 
 MainWindow::MainWindow(ChessGame* game)
@@ -357,6 +363,16 @@ void MainWindow::createDockWindows()
 	engineDebugDock->close();
 	addDockWidget(Qt::BottomDockWidgetArea, engineDebugDock);
 
+	// Applicatino debug
+	auto appDebugDock = new QDockWidget(tr("Application Debug"), this);
+	appDebugDock->setObjectName("ApplicationDebugDock");
+	m_appDebugLog = new PlainTextLog(appDebugDock);
+	connect(CuteChessApplication::instance(),
+	    &CuteChessApplication::applicationStringMessage, m_appDebugLog,
+	    &PlainTextLog::appendPlainText);
+	appDebugDock->setWidget(m_appDebugLog);
+	addDockWidget(Qt::BottomDockWidgetArea, appDebugDock);
+
 	// Evaluation history
 	auto evalHistoryDock = new QDockWidget(tr("Evaluation history"), this);
 	evalHistoryDock->setObjectName("EvalHistoryDock");
@@ -399,6 +415,7 @@ void MainWindow::createDockWindows()
 	m_viewMenu->addAction(moveListDock->toggleViewAction());
 	m_viewMenu->addAction(tagsDock->toggleViewAction());
 	m_viewMenu->addAction(engineDebugDock->toggleViewAction());
+	m_viewMenu->addAction(appDebugDock->toggleViewAction());
 	m_viewMenu->addAction(evalHistoryDock->toggleViewAction());
 	m_viewMenu->addAction(whiteEvalDock->toggleViewAction());
 	m_viewMenu->addAction(blackEvalDock->toggleViewAction());
@@ -921,10 +938,10 @@ QString MainWindow::genericTitle(const TabData& gameData) const
 	}
 
 	if (result.isNone())
-		return tr("%1 vs %2").arg(white, black);
+		return tr("%1 vs %2%3").arg(white, black, gameData.m_titleSuffix);
 	else
-		return tr("%1 vs %2 (%3)")
-		       .arg(white, black, result.toShortString());
+		return tr("%1 vs %2 (%3)%4")
+			   .arg(white, black, result.toShortString(), gameData.m_titleSuffix);
 }
 
 void MainWindow::updateMenus()
